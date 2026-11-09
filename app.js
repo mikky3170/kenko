@@ -1,4 +1,4 @@
-// [稼働Ver v1.0.0 作業版 Rev.2] 今日の健康ひとこと機能実装（専門家アドバイスライブラリ・日替わりローテーション）・app.jsへ正式リネーム
+// [稼働Ver v1.1.1 作業版 Rev.1] JSONエクスポートのバージョンメタデータをv1.1.1へ更新
 
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
 const MASTER_KEY_SETTINGS = 'health_kun_data_master_settings';
@@ -6,7 +6,7 @@ const MASTER_KEY_MENUS = 'health_kun_data_master_menus';
 const MASTER_KEY_MEDS = 'health_kun_data_master_meds';
 const MASTER_KEY_PROFILE = 'health_kun_data_master_profile';
 
-// 専門家からの「健康に関する今日のひとことコメント」ライブラリ（臨床医学 ＆ 病態栄養学）
+// 専門家からの「健康に関する今日のひとことコメント」ライブラリ
 const HEALTH_TIPS_LIBRARY = [
   {
     author: "🩺 Dr.ケン (循環器内科)",
@@ -170,13 +170,13 @@ const SUBTYPES_DEF = {
     { name: "豆乳入り", cal: 50, salt: 0.1 }
   ],
   "ラーメン・中華麺": [
-    { name: "中華そば", cal: 450, salt: 1.8 },
-    { name: "チャーシューメン", cal: 650, salt: 2.6 },
-    { name: "博多豚骨ラーメン", cal: 580, salt: 2.4 },
-    { name: "横浜家系", cal: 850, salt: 3.8 },
+    { name: "中華そば", cal: 450, salt: 2.4 },
+    { name: "チャーシューメン", cal: 650, salt: 3.2 },
+    { name: "博多豚骨ラーメン", cal: 580, salt: 2.8 },
+    { name: "横浜家系", cal: 850, salt: 4.0 },
     { name: "二郎系", cal: 1600, salt: 6.5 },
     { name: "つけ麺", cal: 800, salt: 3.2 },
-    { name: "冷やし中華", cal: 480, salt: 1.5 }
+    { name: "冷やし中華", cal: 480, salt: 2.0 }
   ],
   "ホルモン焼き・レバー炒め": [
     { name: "ホルモン(シロ/小腸)", cal: 280, salt: 1.2 },
@@ -191,9 +191,9 @@ const DEFAULT_50_MENUS = [
   { id: 2,  cat: "主食", name: "玄米・雑穀米",     m: true,  l: true,  d: true,  ln: false, cal: 230, salt: 0.0 },
   { id: 3,  cat: "主食", name: "食パン・トースト", m: true,  l: false, d: false, ln: false, cal: 160, salt: 0.8 },
   { id: 4,  cat: "主食", name: "ロール・惣菜パン", m: true,  l: true,  d: false, ln: true,  cal: 220, salt: 1.0 },
-  { id: 5,  cat: "主食", name: "うどん",           m: true,  l: true,  d: true,  ln: true,  cal: 320, salt: 3.5 },
-  { id: 6,  cat: "主食", name: "蕎麦",             m: true,  l: true,  d: true,  ln: true,  cal: 300, salt: 3.5 },
-  { id: 7,  cat: "主食", name: "ラーメン・中華麺", m: false, l: true,  d: true,  ln: true,  cal: 450, salt: 4.5 },
+  { id: 5,  cat: "主食", name: "うどん",           m: true,  l: true,  d: true,  ln: true,  cal: 320, salt: 2.2 },
+  { id: 6,  cat: "主食", name: "蕎麦",             m: true,  l: true,  d: true,  ln: true,  cal: 300, salt: 2.0 },
+  { id: 7,  cat: "主食", name: "ラーメン・中華麺", m: false, l: true,  d: true,  ln: true,  cal: 450, salt: 2.4 },
   { id: 8,  cat: "主食", name: "パスタ",           m: false, l: true,  d: true,  ln: false, cal: 420, salt: 1.8 },
   { id: 9,  cat: "主食", name: "おにぎり",         m: true,  l: true,  d: false, ln: true,  cal: 180, salt: 0.5 },
   { id: 10, cat: "主食", name: "餅・シリアル類",   m: true,  l: false, d: false, ln: false, cal: 170, salt: 0.2 },
@@ -243,7 +243,7 @@ const DEFAULT_50_MENUS = [
   { id: 51, cat: "間食", name: "ショートケーキ",       m: false, l: false, d: false, ln: false, cal: 340, salt: 0.2 },
   { id: 52, cat: "間食", name: "アイスクリーム",       m: false, l: false, d: false, ln: false, cal: 180, salt: 0.1 },
 
-  { id: 48, cat: "夜食", name: "カップラーメン(麺)",   m: false, l: false, d: false, ln: true,  cal: 350, salt: 4.5 },
+  { id: 48, cat: "夜食", name: "カップラーメン(麺)",   m: false, l: false, d: false, ln: true,  cal: 350, salt: 2.5 },
   { id: 49, cat: "夜食", name: "お茶漬け・雑炊",       m: false, l: false, d: false, ln: true,  cal: 180, salt: 1.2 },
   { id: 50, cat: "夜食", name: "深夜スナック・おつまみ", m: false, l: false, d: false, ln: true, cal: 160, salt: 0.6 }
 ];
@@ -396,13 +396,9 @@ function setSlotCardCollapsed(slot, collapsed) {
   }
 }
 
-/**
- * 専門家の日替わり健康ひとこと表示ロジック
- */
 function renderTodayHealthTip(dateStr) {
   if (!HEALTH_TIPS_LIBRARY || HEALTH_TIPS_LIBRARY.length === 0) return;
   
-  // 日付文字列（YYYY-MM-DD）からハッシュ値を計算して日替わり決定
   let hash = 0;
   for (let i = 0; i < dateStr.length; i++) {
     hash = ((hash << 5) - hash) + dateStr.charCodeAt(i);
@@ -493,6 +489,13 @@ function migratePastVersions() {
       if (!existing.some(x => x.name.includes("牛焼肉"))) {
         existing.push({ id: 55, cat: "おかず", name: "牛焼肉・カルビ/ロース", m: false, l: true, d: true, ln: false, cal: 240, salt: 1.0 });
       }
+      const uIdx = existing.findIndex(x => x.name === "うどん");
+      if (uIdx !== -1) existing[uIdx].salt = 2.2;
+      const soIdx = existing.findIndex(x => x.name === "蕎麦");
+      if (soIdx !== -1) existing[soIdx].salt = 2.0;
+      const rIdx = existing.findIndex(x => x.name === "ラーメン・中華麺");
+      if (rIdx !== -1) existing[rIdx].salt = 2.4;
+
       localStorage.setItem(MASTER_KEY_MENUS, JSON.stringify(existing));
     } catch (e) {}
   }
@@ -1029,13 +1032,13 @@ function changeTrayItemSubtype(slot, index, subName) {
 
 function getSaltBadgeHTML(item) {
   let badges = '';
-  if (item.cat === '汁物' || item.name.includes('味噌汁')) {
+  if (item.name.includes('味噌汁')) {
     badges += `<span class="salt-badge salt-badge-miso-half">味噌：半分(減塩)</span>`;
   }
   if (item.name.includes('納豆')) {
     badges += `<span class="salt-badge salt-badge-natto-half">タレ半分</span>`;
   }
-  if (item.name.includes('うどん') || item.name.includes('蕎麦') || item.name.includes('ラーメン') || item.name.includes('パスタ')) {
+  if (item.name.includes('うどん') || item.name.includes('蕎麦') || item.name.includes('ラーメン')) {
     badges += `<span class="salt-badge salt-badge-noodle-soup">つゆ飲まない</span>`;
   }
   return badges;
@@ -1063,12 +1066,11 @@ function calcEffectiveItemStats(item) {
   const cal = Math.round((item.cal || 0) * mult);
   let salt = (item.salt || 0) * mult;
 
-  if (item.cat === '汁物' || item.name.includes('味噌汁')) {
+  // 味噌汁と納豆（タレ半分）のみ半減適用
+  if (item.name.includes('味噌汁')) {
     salt *= 0.5;
   } else if (item.name.includes('納豆')) {
     salt *= 0.5;
-  } else if (item.name.includes('うどん') || item.name.includes('蕎麦') || item.name.includes('ラーメン')) {
-    salt *= 0.4;
   }
 
   return { cal, salt };
@@ -1125,8 +1127,8 @@ function renderTray(slot) {
 
   const soupBadge = document.getElementById(`${prefix}_soup_status_badge`);
   if (soupBadge) {
-    const hasSoup = list.some(x => x.cat === '汁物' || x.name.includes('汁') || x.name.includes('スープ'));
-    if (hasSoup) {
+    const hasMiso = list.some(x => x.name.includes('味噌汁'));
+    if (hasMiso) {
       soupBadge.className = 'salt-badge salt-badge-miso-half';
       soupBadge.textContent = '味噌：半分 (約0.6g)';
     } else {
@@ -2061,7 +2063,7 @@ function updateStreakDisplay() {
 
 function exportFullJSON() {
   const fullBackup = {
-    version: "v1.0.0",
+    version: "v1.1.1",
     exportedAt: new Date().toISOString(),
     profile: userProfile,
     meds: medMaster,
@@ -2277,6 +2279,7 @@ function importDataFromCSV(event) {
 
       saveAllRecords();
       loadRecordIntoForm(activeDate);
+      renderTodayHealthTip(activeDate);
       refreshDashboard();
       alert("CSVデータの復元が完了しました！");
     } catch (err) {
