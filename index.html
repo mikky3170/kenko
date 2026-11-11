@@ -1,4 +1,4 @@
-<!-- デスクワーク疲労・表情筋リカバリーガイド(軽量SVG図解付)、サイドバー早見表拡充、画面内スマートトースト通知対応 -->
+<!-- [稼働Ver 作業版 Rev.12] 早見表からガイド図解へのダイレクト遷移＆双方向ナビゲーションの実装 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -146,7 +146,7 @@
     /* ③ 中央スクロール領域 */
     #mainScrollView {
       position: fixed; top: var(--top-h); bottom: var(--bottom-h); left: 0; right: 0;
-      overflow-y: auto; padding: 8px 10px;
+      overflow-y: auto; padding: 8px 10px; scroll-behavior: smooth;
     }
     .scroll-inner-desktop { max-width: var(--app-desktop-w); margin: 0 auto; }
 
@@ -207,8 +207,16 @@
       border-radius: 6px; padding: 5px 8px; color: var(--text-main); font-size: 0.72rem;
       cursor: pointer; margin-bottom: 4px; transition: var(--transition); font-weight: 600;
     }
-    .quick-faq-ans { display: none; font-size: 0.7rem; color: var(--text-muted); padding: 5px 8px; background: rgba(0,0,0,0.3); border-radius: 6px; margin-bottom: 6px; line-height: 1.45; }
+    .quick-faq-ans { display: none; font-size: 0.7rem; color: var(--text-muted); padding: 6px 8px; background: rgba(0,0,0,0.3); border-radius: 6px; margin-bottom: 6px; line-height: 1.45; }
     .quick-faq-ans.open { display: block; }
+    .faq-jump-btn {
+      display: inline-flex; align-items: center; gap: 4px; margin-top: 5px;
+      padding: 3px 8px; border-radius: 5px; background: rgba(56, 189, 248, 0.15);
+      border: 1px solid var(--accent-blue); color: var(--accent-blue);
+      font-size: 0.68rem; font-weight: 800; cursor: pointer; text-decoration: none;
+      transition: var(--transition);
+    }
+    .faq-jump-btn:hover { background: rgba(56, 189, 248, 0.3); color: #ffffff; }
 
     /* カード ＆ アコーディオン */
     .card {
@@ -408,7 +416,19 @@
     .guide-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
     .guide-title { font-size: 1.0rem; font-weight: 800; color: #ffffff; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid rgba(40, 54, 84, 0.6); padding-bottom: 5px; }
     .guide-lead { font-size: 0.8rem; color: var(--text-main); margin-bottom: 8px; line-height: 1.5; }
-    .guide-step-card { background: rgba(8, 12, 22, 0.5); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 8px; }
+    
+    .guide-step-card {
+      background: rgba(8, 12, 22, 0.5); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px; margin-bottom: 10px;
+      transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+    /* ダイレクト遷移時のフォーカス点滅 */
+    .guide-step-card.target-highlight {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+      background: rgba(14, 25, 48, 0.7);
+    }
+
     .guide-step-title { font-size: 0.85rem; font-weight: 800; color: var(--accent-blue); margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; }
     .guide-text { font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; }
     .guide-illust-wrap {
@@ -422,6 +442,17 @@
       padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;
     }
     .guide-svg { width: 100%; max-width: 120px; height: auto; }
+
+    .guide-return-bar {
+      margin-top: 8px; padding-top: 6px; border-top: 1px dashed rgba(40, 54, 84, 0.6);
+      display: flex; justify-content: flex-end;
+    }
+    .btn-guide-return {
+      background: transparent; border: 1px solid rgba(56, 189, 248, 0.5); color: var(--accent-blue);
+      font-size: 0.7rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 4px; transition: var(--transition);
+    }
+    .btn-guide-return:hover { background: rgba(56, 189, 248, 0.15); color: #ffffff; }
 
     .character-card { display: flex; gap: 10px; align-items: flex-start; background: rgba(8, 12, 22, 0.6); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 8px; }
     .char-avatar { font-size: 2.0rem; flex-shrink: 0; }
@@ -474,13 +505,13 @@
     <div class="top-row-1">
       <div class="brand-wrap">
         <div class="brand-title">🩺 <span>健康管理くん</span></div>
-        <span class="app-version-badge" id="appVersionBadge">v1.3.0</span>
+        <span class="app-version-badge" id="appVersionBadge">v1.3.1</span>
       </div>
       <nav class="nav-tabs">
-        <button class="tab-btn active" onclick="switchTab('inputTab')">✍️ 入力</button>
-        <button class="tab-btn" onclick="switchTab('chartTab')">📊 分析</button>
-        <button class="tab-btn" onclick="switchTab('settingTab')">⚙️ 設定</button>
-        <button class="tab-btn" onclick="switchTab('guideTab')">📖 ガイド</button>
+        <button class="tab-btn active" data-tab="inputTab" onclick="switchTab('inputTab')">✍️ 入力</button>
+        <button class="tab-btn" data-tab="chartTab" onclick="switchTab('chartTab')">📊 分析</button>
+        <button class="tab-btn" data-tab="settingTab" onclick="switchTab('settingTab')">⚙️ 設定</button>
+        <button class="tab-btn" data-tab="guideTab" onclick="switchTab('guideTab')">📖 ガイド</button>
       </nav>
     </div>
 
@@ -972,25 +1003,29 @@
               <span style="font-size:0.7rem; color:var(--text-muted);">タップで開閉 ▼</span>
             </div>
             <div class="toggle-content" id="sideFaqWrap-content">
+              
               <button class="quick-faq-btn" onclick="toggleFaq('faqDesk1')">▶ 🪑 椅子で腰が痛いときの「坐骨リセット」</button>
               <div class="quick-faq-ans" id="faqDesk1">
                 ①お尻の下に手を入れ尖った骨（坐骨）で座る<br>
                 ②片脚を後ろに引いて付け根（腸腰筋）を15秒伸ばす<br>
-                ③丸めたタオルを腰のくびれに挟んでS字維持！
+                ③丸めたタオルを腰のくびれに挟んでS字維持！<br>
+                <button class="faq-jump-btn" onclick="navigateTo('guideTab', 'guideCare_lumbar')">📖 図解と詳しい解説を見る →</button>
               </div>
 
               <button class="quick-faq-btn" onclick="toggleFaq('faqDesk2')">▶ 💆‍♂️ 目と肩の疲れに「後頭下筋プッシュ」</button>
               <div class="quick-faq-ans" id="faqDesk2">
                 ①首と後頭部の境目のくぼみ（天柱）に親指を当てる<br>
                 ②目を閉じ、目線の方向へ斜め上に5秒押し上げる<br>
-                ③両肩をギュッとすくめて、ストンと脱力×5回！
+                ③両肩をギュッとすくめて、ストンと脱力×5回！<br>
+                <button class="faq-jump-btn" onclick="navigateTo('guideTab', 'guideCare_neck')">📖 図解と詳しい解説を見る →</button>
               </div>
 
               <button class="quick-faq-btn" onclick="toggleFaq('faqDesk3')">▶ ✨ 表情筋リフト（たるみ・ほうれい線・眉間）</button>
               <div class="quick-faq-ans" id="faqDesk3">
                 ・【下まぶた】上は見ず、下まぶただけ眩しい目5秒×3回<br>
                 ・【ほうれい線】口の中で舌を大きく時計回りに10周<br>
-                ・【眉間のしわ】眉頭の骨を指でつまんで小さく回す！
+                ・【眉間のしわ】眉頭の骨を指でつまんで小さく回す！<br>
+                <button class="faq-jump-btn" onclick="navigateTo('guideTab', 'guideCare_face')">📖 図解と詳しい解説を見る →</button>
               </div>
 
               <button class="quick-faq-btn" onclick="toggleFaq('faq1')">▶ 🍜 麺類のスープを残した時の塩分は？</button>
@@ -1393,7 +1428,7 @@
         </div>
       </section>
 
-      <!-- 💡 新設：デスクワーク疲労＆表情筋リカバリー・クリニック（軽量SVG図解付） -->
+      <!-- 💡 デスクワーク疲労＆表情筋リカバリー・クリニック（軽量SVG図解付） -->
       <section class="guide-section" style="border-color: var(--accent-blue);">
         <h2 class="guide-title" style="color: var(--accent-blue);">
           <span>🧘‍♂️ （５）デスクワーク疲労 ＆ 表情筋リカバリー・クリニック</span>
@@ -1403,7 +1438,7 @@
         </div>
 
         <!-- 1. 腰痛ケア -->
-        <div class="guide-step-card">
+        <div class="guide-step-card" id="guideCare_lumbar">
           <div class="guide-step-title">
             <span>🪑 ① 椅子に座っていると腰が痛い（腸腰筋リセット ＆ 坐骨座り）</span>
             <span style="font-size:0.7rem; color:var(--accent-amber); font-weight:700;">所要時間: 1分</span>
@@ -1432,10 +1467,13 @@
               3. <b>付け根伸ばし:</b> 片脚を後ろに引いてつま先立ちにし、太ももの前付け根を15秒じんわり伸ばします。
             </div>
           </div>
+          <div class="guide-return-bar">
+            <button class="btn-guide-return" onclick="navigateTo('inputTab', 'sideFaqWrap')">✍️ 入力画面へ戻る</button>
+          </div>
         </div>
 
         <!-- 2. 肩こり・眼精疲労 -->
-        <div class="guide-step-card">
+        <div class="guide-step-card" id="guideCare_neck">
           <div class="guide-step-title">
             <span>💆‍♂️ ② 肩こり ＆ 目の疲れ（後頭下筋群プッシュ ＆ シュラッグ）</span>
             <span style="font-size:0.7rem; color:var(--accent-amber); font-weight:700;">所要時間: 40秒</span>
@@ -1463,10 +1501,13 @@
               3. <b>20-20-20ルール:</b> 20分作業したら、20秒間、6m以上遠くをぼんやり眺める。
             </div>
           </div>
+          <div class="guide-return-bar">
+            <button class="btn-guide-return" onclick="navigateTo('inputTab', 'sideFaqWrap')">✍️ 入力画面へ戻る</button>
+          </div>
         </div>
 
         <!-- 3. 表情筋体操 -->
-        <div class="guide-step-card">
+        <div class="guide-step-card" id="guideCare_face">
           <div class="guide-step-title">
             <span>✨ ③ 表情筋体操（目の下のたるみ・ほうれい線・眉間のしわ）</span>
             <span style="font-size:0.7rem; color:var(--accent-amber); font-weight:700;">所要時間: 1分</span>
@@ -1497,6 +1538,9 @@
               2. <b>ほうれい線（舌回しアイロン）:</b> 口を閉じたまま、歯の表面をなぞるように舌で大きく円を描く（時計回り10回・反時計回り10回）。<br>
               3. <b>眉間のしわ（皺眉筋リリース）:</b> 眉頭の骨を親指と人差し指でつまみ、痛気持ちいい強さで10秒小さく揺らしてほぐす。
             </div>
+          </div>
+          <div class="guide-return-bar">
+            <button class="btn-guide-return" onclick="navigateTo('inputTab', 'sideFaqWrap')">✍️ 入力画面へ戻る</button>
           </div>
         </div>
 
