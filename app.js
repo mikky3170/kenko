@@ -1,4 +1,4 @@
-// [稼働作業版] スマートトースト通知フォールバック(Android Chromeエラー解消)、デスクワーク・表情筋セルフケア見守り通知対応
+// [稼働Ver 作業版 Rev.12] 堅牢な共通ナビゲーション(navigateTo)および早見表-ガイド間の双方向スクロール連携実装
 
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
 const MASTER_KEY_SETTINGS = 'health_kun_data_master_settings';
@@ -1327,12 +1327,45 @@ function highlightCurrentTimeSlot() {
   else if (h >= 21 || h < 5) document.getElementById('slot-night')?.classList.add('highlight');
 }
 
+// 堅牢化されたタブ切り替え（イベントオブジェクト非依存）
 function switchTab(tabId) {
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  document.getElementById(tabId).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => {
+    c.classList.toggle('active', c.id === tabId);
+  });
   if (tabId === 'chartTab') refreshDashboard();
+}
+
+// 共通ナビゲーション関数（タブ切り替え ＋ スムーススクロール ＋ ハイライトフィードバック）
+function navigateTo(tabId, targetElementId) {
+  switchTab(tabId);
+
+  if (!targetElementId) return;
+
+  setTimeout(() => {
+    // ターゲットが早見表などで閉じていた場合は自動展開
+    if (targetElementId === 'sideFaqWrap') {
+      const content = document.getElementById('sideFaqWrap-content');
+      if (content && !content.classList.contains('open')) {
+        content.classList.add('open');
+      }
+    }
+
+    const targetEl = document.getElementById(targetElementId);
+    const scrollContainer = document.getElementById('mainScrollView');
+
+    if (targetEl && scrollContainer) {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      targetEl.classList.remove('target-highlight');
+      void targetEl.offsetWidth; // リフロー強制
+      targetEl.classList.add('target-highlight');
+      setTimeout(() => {
+        targetEl.classList.remove('target-highlight');
+      }, 2000);
+    }
+  }, 100);
 }
 
 function adjustWater(diff) {
