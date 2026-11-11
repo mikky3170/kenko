@@ -1,4 +1,4 @@
-<!-- [稼働Ver v1.2.0 作業版 Rev.1] バージョン表記をv1.2.0へ更新、トレイ追加時ハイライト用スタイルの追加 -->
+<!-- [稼働Ver v1.2.1 作業版 Rev.1] バージョン一元管理(id=appVersionBadge)、設定画面メニューテーブルのNo列削除とカラム幅最適化 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -57,7 +57,7 @@
     .brand-title { font-size: 1.0rem; font-weight: 900; color: #ffffff; white-space: nowrap; display: flex; align-items: center; gap: 3px; letter-spacing: 0.3px; }
     .brand-title span { color: var(--accent-blue); }
 
-    /* バージョンバッジ */
+    /* バージョンバッジ（一元管理の単一情報源） */
     .app-version-badge {
       font-size: 0.68rem; font-weight: 800; color: var(--accent-blue);
       border: 1px solid #0284c7; background: rgba(2, 132, 199, 0.18);
@@ -381,15 +381,16 @@
 
     .profile-card { background: #131b2e; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; }
     
-    .settings-table { width: 100%; border-collapse: collapse; }
-    .settings-table th, .settings-table td { padding: 5px 6px; border-bottom: 1px solid var(--border); font-size: 0.74rem; }
+    .settings-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .settings-table th, .settings-table td { padding: 5px 3px; border-bottom: 1px solid var(--border); font-size: 0.72rem; }
     .settings-table th {
       color: var(--text-muted); background: #0b1120; text-align: center;
       position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 var(--border);
     }
     .settings-table td.center { text-align: center; }
-    .menu-master-scroll { max-height: 360px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; margin-top: 6px; position: relative; }
-    .table-input { width: 100%; padding: 3px 5px; border-radius: 3px; border: 1px solid var(--border); background-color: var(--bg-input); color: var(--text-main); font-size: 0.75rem; }
+    .menu-master-scroll { max-height: 380px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; margin-top: 6px; position: relative; }
+    .table-input { width: 100%; padding: 3px 4px; border-radius: 3px; border: 1px solid var(--border); background-color: var(--bg-input); color: var(--text-main); font-size: 0.74rem; }
+    .table-input-compact { padding: 3px 2px; text-align: center; font-size: 0.72rem; }
 
     .backup-scenario-card {
       background: rgba(8, 12, 22, 0.6); border: 1px solid var(--border);
@@ -432,14 +433,14 @@
 </head>
 <body>
 
-<!-- ① 上部固定バー（タイトル・v1.2.0バッジ・ナビ・日付・水分） -->
+<!-- ① 上部固定バー（タイトル・バージョン一元管理バッジ・ナビ・日付・水分） -->
 <header id="topBarWrap">
   <div class="top-bar-inner">
     
     <div class="top-row-1">
       <div class="brand-wrap">
         <div class="brand-title">🩺 <span>健康管理くん</span></div>
-        <span class="app-version-badge">v1.2.0</span>
+        <span class="app-version-badge" id="appVersionBadge">v1.2.1</span>
       </div>
       <nav class="nav-tabs">
         <button class="tab-btn active" onclick="switchTab('inputTab')">✍️ 入力</button>
@@ -1082,7 +1083,7 @@
         </div>
 
         <div class="toggle-section" style="margin-top:6px; margin-bottom:8px; border-color:var(--border);">
-          <div class="toggle-bar" onclick="toggleSection('milestoneMore')">
+　　　　　<div class="toggle-bar" onclick="toggleSection('milestoneMore')">
             <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted);">➕ 中期・長期の目標を追加設定する（タップで開閉）</span>
             <span class="toggle-icon">▼</span>
           </div>
@@ -1149,7 +1150,14 @@
         <div class="menu-master-scroll" style="max-height:260px;">
           <table class="settings-table">
             <thead>
-              <tr><th>お薬・サプリ名 (規格・mg)</th><th>朝</th><th>昼</th><th>晩</th><th>就</th><th>削除</th></tr>
+              <tr>
+                <th style="width: auto;">お薬・サプリ名 (規格・mg)</th>
+                <th style="width: 32px;">朝</th>
+                <th style="width: 32px;">昼</th>
+                <th style="width: 32px;">晩</th>
+                <th style="width: 32px;">就</th>
+                <th style="width: 36px;">削除</th>
+              </tr>
             </thead>
             <tbody id="medMasterTableBody"></tbody>
           </table>
@@ -1165,7 +1173,13 @@
         </div>
         <table class="settings-table">
           <thead>
-            <tr><th>測定・記録項目</th><th>朝</th><th>昼</th><th>晩</th><th>就</th></tr>
+            <tr>
+              <th style="width: auto;">測定・記録項目</th>
+              <th style="width: 36px;">朝</th>
+              <th style="width: 36px;">昼</th>
+              <th style="width: 36px;">晩</th>
+              <th style="width: 36px;">就</th>
+            </tr>
           </thead>
           <tbody>
             <tr>
@@ -1193,16 +1207,28 @@
         </table>
       </div>
 
-      <!-- 食事パーツ設定 -->
+      <!-- 食事パーツ設定（No列廃止・横幅最適化・メニュー名最大化） -->
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <h2 class="card-title">🍱 食事パーツ設定（全品マスタ）</h2>
           <button class="btn btn-outline" style="padding:2px 8px; font-size:0.7rem;" onclick="resetMenusToDefault()">↺ 初期値に戻す</button>
         </div>
+        <div style="font-size:0.71rem; color:var(--text-muted); margin-top:3px; margin-bottom:5px;">
+          ※区分ごとに整列しています。各時間帯への表示と栄養基準値を編集できます。
+        </div>
         <div class="menu-master-scroll">
           <table class="settings-table">
             <thead>
-              <tr><th>No</th><th>区分</th><th>メニュー名</th><th>朝</th><th>昼</th><th>晩</th><th>夜食</th><th>kcal</th><th>塩分</th></tr>
+              <tr>
+                <th style="width: 44px;">区分</th>
+                <th style="width: auto;">メニュー名</th>
+                <th style="width: 26px;">朝</th>
+                <th style="width: 26px;">昼</th>
+                <th style="width: 26px;">晩</th>
+                <th style="width: 26px;">夜</th>
+                <th style="width: 46px;">kcal</th>
+                <th style="width: 40px;">塩分</th>
+              </tr>
             </thead>
             <tbody id="menuMasterTableBody"></tbody>
           </table>
