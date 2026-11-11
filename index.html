@@ -1,4 +1,4 @@
-<!-- [稼働Ver v1.1.1 作業版 Rev.1] バージョン表記をv1.1.1へ更新 -->
+<!-- [稼働Ver v1.2.0 作業版 Rev.1] バージョン表記をv1.2.0へ更新、トレイ追加時ハイライト用スタイルの追加 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -272,7 +272,11 @@
     .meal-tray-right {
       background: rgba(8, 12, 22, 0.6); border: 1px dashed var(--border);
       border-radius: var(--radius-sm); padding: 8px; display: flex; flex-direction: column;
-      min-height: 220px;
+      min-height: 220px; transition: border-color 0.25s ease, background-color 0.25s ease;
+    }
+    .meal-tray-right.tray-highlight-flash {
+      border-color: var(--accent-blue);
+      background: rgba(56, 189, 248, 0.12);
     }
 
     .chip-group { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
@@ -428,14 +432,14 @@
 </head>
 <body>
 
-<!-- ① 上部固定バー（タイトル・v1.1.1バッジ・ナビ・日付・水分） -->
+<!-- ① 上部固定バー（タイトル・v1.2.0バッジ・ナビ・日付・水分） -->
 <header id="topBarWrap">
   <div class="top-bar-inner">
     
     <div class="top-row-1">
       <div class="brand-wrap">
         <div class="brand-title">🩺 <span>健康管理くん</span></div>
-        <span class="app-version-badge">v1.1.1</span>
+        <span class="app-version-badge">v1.2.0</span>
       </div>
       <nav class="nav-tabs">
         <button class="tab-btn active" onclick="switchTab('inputTab')">✍️ 入力</button>
@@ -556,7 +560,7 @@
                   <div class="chip-group" id="m_chips_drink"></div>
                 </div>
 
-                <div class="meal-tray-right">
+                <div class="meal-tray-right" id="m_tray_wrap">
                   <div style="font-size:0.72rem; color:var(--text-muted); font-weight:700; margin-bottom:4px; display:flex; justify-content:space-between;">
                     <span>選択中パーツ</span>
                     <span id="m_tray_quick_total" style="color:var(--accent-amber); font-weight:800;">0 kcal</span>
@@ -577,7 +581,8 @@
             </div>
             <div class="toggle-content" id="snack-content">
               <div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:4px;">
-                ※何杯でも・何個でも追加OK！（少＝一口 / 普＝1個 / 多＝2個）
+                ※何杯でも・何個でも追加OK！（少＝一口 / 普＝1個 / 多＝2個）<br>
+                ※間食しなかった日は放置（未記録）のままでOKです。
               </div>
               <div class="chip-group" id="snack_chips"></div>
               
@@ -644,7 +649,7 @@
                   <div class="chip-group" id="l_chips_drink"></div>
                 </div>
 
-                <div class="meal-tray-right">
+                <div class="meal-tray-right" id="l_tray_wrap">
                   <div style="font-size:0.72rem; color:var(--text-muted); font-weight:700; margin-bottom:4px; display:flex; justify-content:space-between;">
                     <span>選択中パーツ</span>
                     <span id="l_tray_quick_total" style="color:var(--accent-amber); font-weight:800;">0 kcal</span>
@@ -714,7 +719,7 @@
                   <div class="chip-group" id="d_chips_drink"></div>
                 </div>
 
-                <div class="meal-tray-right">
+                <div class="meal-tray-right" id="d_tray_wrap">
                   <div style="font-size:0.72rem; color:var(--text-muted); font-weight:700; margin-bottom:4px; display:flex; justify-content:space-between;">
                     <span>選択中パーツ</span>
                     <span id="d_tray_quick_total" style="color:var(--accent-amber); font-weight:800;">0 kcal</span>
@@ -761,12 +766,15 @@
               <span class="time-badge" id="badge-latenight">未記録</span>
             </div>
             <div class="toggle-content" id="latenight-content">
+              <div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:4px;">
+                ※夜食を食べなかった日は放置（未記録）のままでOKです。
+              </div>
               <div class="meal-split-container">
                 <div class="meal-picker-left">
                   <div style="font-size:0.72rem; color:var(--accent-purple); font-weight:700; margin-bottom:4px;">🍜 夜食候補をタップ</div>
                   <div class="chip-group" id="latenight_chips"></div>
                 </div>
-                <div class="meal-tray-right">
+                <div class="meal-tray-right" id="ln_tray_wrap">
                   <div style="font-size:0.72rem; color:var(--text-muted); font-weight:700; margin-bottom:4px; display:flex; justify-content:space-between;">
                     <span>選択中の夜食</span>
                     <span id="ln_tray_quick_total" style="color:var(--accent-amber); font-weight:800;">0 kcal</span>
@@ -889,7 +897,7 @@
             </div>
           </div>
 
-          <!-- 💡 専門家からの「健康に関する今日のひとことコメント」新設枠 -->
+          <!-- 💡 専門家からの「健康に関する今日のひとことコメント」枠 -->
           <div class="assistant-card" id="side_today_tip_card">
             <div class="assistant-card-header">
               <span>💡 本日の健康ひとこと (日替わり専門家コラム)</span>
