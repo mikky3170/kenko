@@ -1,4 +1,4 @@
-// [稼働Ver v1.2.1 作業版 Rev.1] バージョン一元取得化(index.html参照)、メニュー体系順ソート、No列廃止に伴うテーブル描画最適化
+// [稼働作業版] スマートトースト通知フォールバック(Android Chromeエラー解消)、デスクワーク・表情筋セルフケア見守り通知対応
 
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
 const MASTER_KEY_SETTINGS = 'health_kun_data_master_settings';
@@ -24,13 +24,31 @@ const HEALTH_TIPS_LIBRARY = [
     author: "🩺 Dr.ケン (循環器内科)",
     role: "循環器内科専門医",
     color: "var(--accent-blue)",
-    tip: "家庭血圧は『座って1〜2分安静にしてから測定』が臨床の鉄則です。測定直前の深呼吸を2回するだけで、緊張による見かけの高血圧（白衣現象）をリセットできます。"
+    tip: "デスクワーク中の腰痛は、お尻の尖った骨（坐骨）2点で座り、丸めたタオルを腰のくびれに挟むだけで椎間板への圧力が半減します。骨盤を立てて作業しましょう。"
+  },
+  {
+    author: "🩺 Dr.ケン (循環器内科)",
+    role: "循環器内科専門医",
+    color: "var(--accent-blue)",
+    tip: "目の奥の疲れと首こりは連動しています。首の後ろのくぼみ（天柱）を親指で斜め上に5秒じんわり押し上げると、毛様体筋の緊張が解けて視界が明るくなります。"
   },
   {
     author: "🥗 管理栄養士 アヤ",
     role: "臨床病態栄養指導士",
     color: "var(--accent-green)",
     tip: "食事の最初に野菜やおひたしを食べる『ベジファースト』は、血糖値スパイクを防ぐだけでなく、インスリンの過剰分泌による内臓脂肪の蓄積を直接ブロックします。"
+  },
+  {
+    author: "🩺 Dr.ケン (循環器内科)",
+    role: "循環器内科専門医",
+    color: "var(--accent-blue)",
+    tip: "家庭血圧は『座って1〜2分安静にしてから測定』が臨床の鉄則です。測定直前の深呼吸を2回するだけで、緊張による見かけの高血圧（白衣現象）をリセットできます。"
+  },
+  {
+    author: "🥗 管理栄養士 アヤ",
+    role: "臨床病態栄養指導士",
+    color: "var(--accent-green)",
+    tip: "集中すると無意識に眉間にシワが寄っていませんか？眉頭の骨を指でつまんで小さく揺らすと皺眉筋がほぐれ、表情の険しさと頭重感がスーッと消えますよ。"
   },
   {
     author: "🩺 Dr.ケン (循環器内科)",
@@ -54,7 +72,7 @@ const HEALTH_TIPS_LIBRARY = [
     author: "🥗 管理栄養士 アヤ",
     role: "臨床病態栄養指導士",
     color: "var(--accent-green)",
-    tip: "午後のおやつには高カカオチョコ（70%以上）やナッツがおすすめ。良質なポリフェノールと食物繊維が豊富で、夕食の急激なドカ食いを自然に防ぎます。"
+    tip: "ほうれい線予防には、口の中で舌を大きく時計回りに10周回す『舌回しアイロン』が効果抜群！口輪筋が鍛えられ、頬のたるみが内側からリフトアップします。"
   },
   {
     author: "🩺 Dr.ケン (循環器内科)",
@@ -96,12 +114,6 @@ const HEALTH_TIPS_LIBRARY = [
     author: "🩺 Dr.ケン (循環器内科)",
     role: "循環器内科専門医",
     color: "var(--accent-blue)",
-    tip: "冬場や季節の変わり目は、脱衣所やトイレの急な冷え込みによる『ヒートショック』に要注意。入浴前にシャワーで浴室全体を温めておくと安心です。"
-  },
-  {
-    author: "🥗 管理栄養士 アヤ",
-    role: "臨床病態栄養指導士",
-    color: "var(--accent-green)",
     tip: "お酒を飲むときは『チェイサー（お水）』を同量飲むのが鉄則。アルコールの利尿作用による脱水を防ぎ、翌朝の血圧急上昇と頭痛を抑えます。"
   },
   {
@@ -109,18 +121,6 @@ const HEALTH_TIPS_LIBRARY = [
     role: "循環器内科専門医",
     color: "var(--accent-blue)",
     tip: "睡眠時間が6時間を下回ると、交感神経が興奮したままになり高血圧・不整脈リスクが約1.5倍に。就寝前のスマホ画面を控えて脳を休ませましょう。"
-  },
-  {
-    author: "🥗 管理栄養士 アヤ",
-    role: "臨床病態栄養指導士",
-    color: "var(--accent-green)",
-    tip: "肉料理を食べる際は、カルビやバラ肉などの脂身を少し控えめにして『赤身肉』を選ぶと、タンパク質と鉄分をしっかり摂りながら悪玉コレステロールを抑制できます。"
-  },
-  {
-    author: "🩺 Dr.ケン (循環器内科)",
-    role: "循環器内科専門医",
-    color: "var(--accent-blue)",
-    tip: "血圧の薬（降圧剤）を飲み忘れたときは、気づいた時に飲みましょう。絶対に2回分を一度に飲んではいけません。迷ったら主治医や薬剤師に相談を。"
   },
   {
     author: "🥗 管理栄養士 アヤ",
@@ -302,6 +302,7 @@ let stepsCalChartInst = null;
 let notificationTimer = null;
 let sentNotificationsToday = {};
 let currentTipIndex = 0;
+let toastTimeoutId = null;
 
 let currentSelections = { morning: [], lunch: [], dinner: [], snack: [], latenight: [] };
 let currentMeds = { morning: [], lunch: [], dinner: [], night: [] };
@@ -318,7 +319,7 @@ function getCurrentTimeString() {
 
 function getAppVersion() {
   const badge = document.getElementById('appVersionBadge');
-  return badge ? badge.textContent.trim() : 'v1.2.1';
+  return badge ? badge.textContent.trim() : 'v1.3.0';
 }
 
 function openDatePicker() {
@@ -562,23 +563,69 @@ function updateNotificationBadge() {
     badge.textContent = "画面内見守り稼働中";
     badge.className = "time-badge recorded";
   } else if (!("Notification" in window)) {
-    badge.textContent = "非対応ブラウザ"; badge.className = "time-badge";
+    badge.textContent = "画面内見守り稼働中";
+    badge.className = "time-badge recorded";
   } else if (Notification.permission === "granted") {
-    badge.textContent = "有効（許可済）"; badge.className = "time-badge recorded";
+    badge.textContent = "有効（許可済）";
+    badge.className = "time-badge recorded";
   } else if (Notification.permission === "denied") {
-    badge.textContent = "ブロック中"; badge.className = "time-badge";
+    badge.textContent = "画面内見守り稼働中";
+    badge.className = "time-badge recorded";
   } else {
-    badge.textContent = "未許可"; badge.className = "time-badge";
+    badge.textContent = "未許可";
+    badge.className = "time-badge";
   }
+}
+
+function showSmartToast(title, body) {
+  const container = document.getElementById('smartToastContainer');
+  const titleEl = document.getElementById('toastTitle');
+  const bodyEl = document.getElementById('toastBody');
+  if (!container) return;
+
+  if (titleEl) titleEl.textContent = title;
+  if (bodyEl) bodyEl.innerHTML = body;
+
+  container.classList.add('show');
+  if (toastTimeoutId) clearTimeout(toastTimeoutId);
+  toastTimeoutId = setTimeout(() => {
+    container.classList.remove('show');
+  }, 6000);
+}
+
+function hideSmartToast() {
+  const container = document.getElementById('smartToastContainer');
+  if (container) container.classList.remove('show');
+  if (toastTimeoutId) clearTimeout(toastTimeoutId);
+}
+
+// Android Chrome等のIllegal constructorエラーを完全回避するハイブリッド通知
+function triggerSmartNotification(title, body) {
+  let desktopSuccess = false;
+
+  if (window.location.protocol !== 'file:' && ("Notification" in window) && Notification.permission === "granted") {
+    try {
+      const notif = new Notification(title, {
+        body: body.replace(/<[^>]+>/g, ''),
+        icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩺</text></svg>"
+      });
+      notif.onclick = function() { window.focus(); this.close(); };
+      desktopSuccess = true;
+    } catch (e) {
+      desktopSuccess = false;
+    }
+  }
+
+  showSmartToast(title, body);
 }
 
 function enableDesktopNotification() {
   if (window.location.protocol === 'file:') {
-    alert("【安心ガイダンス】\n現在ローカル環境で正常稼働しています。\n画面内の専任バディ（LIVE見守り）とToDoが常にリアルタイム稼働していますので、外部通知なしで100%完璧にご利用いただけます！");
+    showSmartToast("🩺 Dr.ケン (スマート見守り)", "ローカル環境で画面内トースト見守りが100%稼働しています！安心してご利用ください。");
     return;
   }
   if (!("Notification" in window)) {
-    alert("お使いのブラウザはデスクトップ通知に対応していません。");
+    showSmartToast("🩺 Dr.ケン (スマート見守り)", "画面内スマートトースト通知が有効です。スマホでも快適に見守りメッセージをお届けします！");
     return;
   }
   Notification.requestPermission().then(permission => {
@@ -588,32 +635,19 @@ function enableDesktopNotification() {
       saveSettings();
       testDesktopNotification();
     } else {
-      alert("通知が許可されませんでした。\nブラウザのアドレスバー横の鍵アイコンから通知を許可してください。");
+      showSmartToast("🩺 Dr.ケン (スマート見守り)", "画面内スマート見守りバナーが有効化されました。作業中も安心してお使いいただけます！");
     }
   });
 }
 
 function testDesktopNotification() {
-  if (window.location.protocol === 'file:') {
-    alert("【自己診断結果：正常稼働中】\n現在ローカルファイルで動作しています。\n画面右側の『専任バディの見守り』と『本日のToDo』が万全に動作しています！");
-    return;
-  }
-  if (!("Notification" in window)) return;
-  if (Notification.permission !== "granted") { enableDesktopNotification(); return; }
-
-  try {
-    const notif = new Notification("🩺 Dr.ケン (テスト通知)", {
-      body: "現在作業中ですね。1日4杯(1.0L)の水分を意識しながら深呼吸しましょう！",
-      icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩺</text></svg>"
-    });
-    notif.onclick = function() { window.focus(); this.close(); };
-  } catch (e) {
-    alert("通知送信エラー: " + e.message);
-  }
+  triggerSmartNotification(
+    "🩺 Dr.ケン (スマート見守り自己診断)",
+    "【診断成功◎】デスクワークお疲れ様です！椅子では骨盤を立てて坐骨で座り、深呼吸を2回しましょう。"
+  );
 }
 
 function checkAndTriggerSmartNotification() {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
   const now = new Date();
   const hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const today = getTodayString();
@@ -621,22 +655,17 @@ function checkAndTriggerSmartNotification() {
 
   const schedules = [
     { time: "07:30", key: "m_remind", title: "🌅 朝の健康チェック (Dr.ケン)", body: "おはようございます！起床時の睡眠時間・血圧をサッと記録して今日も良い一日を！" },
-    { time: "10:30", key: "water_am", title: "💧 午前の一杯 (アヤ)", body: "お仕事お疲れ様です！コップ1杯の水分補給（0.25L）をどうぞ🥤" },
+    { time: "10:30", key: "water_am", title: "🪑 午前の一服＆坐骨リセット (Dr.ケン)", body: "コップ1杯の水分補給（0.25L）をどうぞ！丸めたタオルを腰に挟み、骨盤を垂直に立て直しましょう。" },
     { time: "12:30", key: "l_remind", title: "☀️ 昼食の記録 (アヤ)", body: "お昼時ですね！麺類のつゆ残し減塩やソイラテの活用、意識してみてくださいね◎" },
-    { time: "15:30", key: "water_pm", title: "☕ リフレッシュ休憩 (Dr.ケン)", body: "午後のひと息にコーヒーやおやつはいかがですか？水分も忘れずに！" },
+    { time: "15:30", key: "water_pm", title: "💆‍♂️ 肩こり＆目のリフレッシュ (Dr.ケン)", body: "午後の疲労ピークです！首の後ろのくぼみ（天柱）を5秒押し上げ、肩をストンと落として目を休めましょう。" },
     { time: "19:30", key: "d_remind", title: "🌙 夕食とお酒のチェック (Dr.ケン)", body: "夕食はお済みですか？今夜は休肝日にできると血管と肝臓の修復が進みますよ。" },
+    { time: "20:30", key: "face_care", title: "✨ 1分表情筋リリース (アヤ)", body: "お風呂や食後のひと息に『舌回しアイロン』＆『眉間つまみ』！一日の表情のコリを解毒しましょう。" },
     { time: "22:30", key: "n_remind", title: "🛌 就寝前の締めくくり (アヤ)", body: "今日も一日お疲れ様でした！就寝前記録を完了したら、スマホを置いて目を休めましょう。" }
   ];
 
   schedules.forEach(sc => {
     if (hm === sc.time && !sentNotificationsToday[today][sc.key]) {
-      try {
-        const notif = new Notification(sc.title, {
-          body: sc.body,
-          icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩺</text></svg>"
-        });
-        notif.onclick = function() { window.focus(); this.close(); };
-      } catch (e) {}
+      triggerSmartNotification(sc.title, sc.body);
       sentNotificationsToday[today][sc.key] = true;
     }
   });
@@ -909,7 +938,7 @@ function resetMenusToDefault() {
 function renderMenuMasterTable() {
   const tbody = document.getElementById('menuMasterTableBody');
   tbody.innerHTML = '';
-  menuMaster.forEach((item, index) => {
+  menuMaster.forEach((item) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="center"><span class="cat-badge cat-badge-${item.cat}">${item.cat}</span></td>
