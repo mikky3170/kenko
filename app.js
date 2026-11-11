@@ -1,4 +1,4 @@
-// [稼働Ver v1.1.1 作業版 Rev.1] JSONエクスポートのバージョンメタデータをv1.1.1へ更新
+// [稼働Ver v1.2.0 作業版 Rev.1] ミネストローネの追加、メニュー短縮チップ表示、トレイ追加時ハイライト演出、終了条件統一
 
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
 const MASTER_KEY_SETTINGS = 'health_kun_data_master_settings';
@@ -208,6 +208,7 @@ const DEFAULT_50_MENUS = [
   { id: 16, cat: "汁物", name: "野菜コンソメスープ", m: true, l: true, d: true, ln: true,  cal: 40, salt: 1.0 },
   { id: 17, cat: "汁物", name: "中華・わかめスープ", m: false, l: true, d: true, ln: true,  cal: 35, salt: 1.1 },
   { id: 18, cat: "汁物", name: "ポタージュ濃縮汁",   m: true, l: true, d: false, ln: false, cal: 95, salt: 1.0 },
+  { id: 56, cat: "汁物", name: "ミネストローネ",     m: true, l: true, d: true, ln: true,  cal: 70, salt: 1.1 },
 
   { id: 19, cat: "おかず", name: "焼き魚・煮魚",       m: true,  l: true,  d: true, ln: false, cal: 160, salt: 1.1 },
   { id: 20, cat: "おかず", name: "刺身・生魚",         m: false, l: true,  d: true, ln: false, cal: 120, salt: 0.6 },
@@ -488,6 +489,9 @@ function migratePastVersions() {
       }
       if (!existing.some(x => x.name.includes("牛焼肉"))) {
         existing.push({ id: 55, cat: "おかず", name: "牛焼肉・カルビ/ロース", m: false, l: true, d: true, ln: false, cal: 240, salt: 1.0 });
+      }
+      if (!existing.some(x => x.name.includes("ミネストローネ"))) {
+        existing.push({ id: 56, cat: "汁物", name: "ミネストローネ", m: true, l: true, d: true, ln: true, cal: 70, salt: 1.1 });
       }
       const uIdx = existing.findIndex(x => x.name === "うどん");
       if (uIdx !== -1) existing[uIdx].salt = 2.2;
@@ -914,6 +918,33 @@ function escapeHtml(str) {
   return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
+// ボタンチップ用の直感短縮表示関数（スマホでの行数爆発・スクロール防止）
+function getShortChipLabel(item) {
+  const n = item.name;
+  if (n === "豚生姜焼き・野菜炒め") return "🐷 豚生姜焼/炒め";
+  if (n === "温野菜・ブロッコリー") return "🥦 温野菜";
+  if (n === "おひたし・和小鉢") return "🥬 おひたし小鉢";
+  if (n === "きんぴら・ひじき煮") return "🥢 きんぴら/ひじき";
+  if (n === "ポテト・マカロニサラダ") return "🥔 ポテトサラダ";
+  if (n === "惣菜揚げ物(コロッケ等)") return "コロッケ・揚物";
+  if (n === "ホルモン焼き・レバー炒め") return "ホルモン/レバー";
+  if (n === "豆腐・冷奴・厚揚げ") return "冷奴・豆腐";
+  if (n === "牛焼肉・カルビ/ロース") return "🥩 牛焼肉";
+  if (n === "牛ステーキ") return "🥩 ステーキ";
+  if (n === "チャーハン・炒飯") return "チャーハン";
+  if (n === "目玉焼き・卵料理") return "🍳 卵料理";
+  if (n === "ロール・惣菜パン") return "惣菜パン";
+  if (n === "餅・シリアル類") return "餅・シリアル";
+  if (n === "深夜スナック・おつまみ") return "おつまみ菓子";
+  if (n === "その他・残り物惣菜") return "残り物惣菜";
+  if (n === "味噌汁(豆腐/わかめ)") return "味噌汁";
+  if (n === "野菜コンソメスープ") return "コンソメスープ";
+  if (n === "中華・わかめスープ") return "中華スープ";
+  if (n === "ミネストローネ") return "🍅 ミネストローネ";
+  if (n === "カップラーメン(麺)") return "カップ麺";
+  return n;
+}
+
 function rebuildAllInputChips() {
   buildCategoryChips('m_chips_main', 'morning', menuMaster.filter(x => x.m && x.cat === "主食"));
   buildCategoryChips('m_chips_soup', 'morning', menuMaster.filter(x => x.m && x.cat === "汁物"));
@@ -946,7 +977,8 @@ function buildCategoryChips(containerId, slot, list) {
   list.forEach(item => {
     const chip = document.createElement('div');
     chip.className = 'chip-btn';
-    chip.textContent = `+ ${item.name}`;
+    chip.textContent = `+ ${getShortChipLabel(item)}`;
+    chip.title = item.name;
     chip.onclick = () => addComponentToTray(slot, item);
     c.appendChild(chip);
   });
@@ -972,7 +1004,18 @@ function copyPreviousMeal(slot) {
 
   currentSelections[slot] = JSON.parse(JSON.stringify(foundItems));
   renderTray(slot);
+  flashTrayHighlight(slot);
   autoSaveField(slot);
+}
+
+function flashTrayHighlight(slot) {
+  const prefix = slot === 'morning' ? 'm' : (slot === 'lunch' ? 'l' : (slot === 'dinner' ? 'd' : (slot === 'latenight' ? 'ln' : slot)));
+  const trayWrap = document.getElementById(`${prefix}_tray_wrap`);
+  if (!trayWrap) return;
+  trayWrap.classList.remove('tray-highlight-flash');
+  void trayWrap.offsetWidth;
+  trayWrap.classList.add('tray-highlight-flash');
+  setTimeout(() => { trayWrap.classList.remove('tray-highlight-flash'); }, 600);
 }
 
 function addComponentToTray(slot, item) {
@@ -997,6 +1040,7 @@ function addComponentToTray(slot, item) {
     salt: salt
   });
   renderTray(slot);
+  flashTrayHighlight(slot);
   autoSaveField(slot);
 }
 
@@ -1417,10 +1461,16 @@ function loadRecordIntoForm(dateStr) {
   const r = allRecords[dateStr] || {};
   updateWaterDisplay(r.waterGlasses || (r.waterBottles ? r.waterBottles * 2 : 0));
 
-  const setBadge = (id, time) => {
+  const setBadge = (id, time, isNone = false) => {
     const el = document.getElementById(id);
-    if (time) { el.textContent = `記録済 ${time}`; el.className = 'time-badge recorded'; }
-    else { el.textContent = '未記録'; el.className = 'time-badge'; }
+    if (!el) return;
+    if (time) {
+      el.textContent = isNone ? `記録済 (飲食なし)` : `記録済 ${time}`;
+      el.className = 'time-badge recorded';
+    } else {
+      el.textContent = '未記録';
+      el.className = 'time-badge';
+    }
   };
 
   const m = r.morning || {};
@@ -1438,10 +1488,11 @@ function loadRecordIntoForm(dateStr) {
   renderTray('morning');
 
   const s = r.snack || {};
-  setBadge('badge-snack', s.time);
+  setBadge('badge-snack', s.time, s.isNone);
   currentSelections.snack = s.items ? JSON.parse(JSON.stringify(s.items)) : [];
   renderTray('snack');
-  if (s.time) document.getElementById('snack-content').classList.add('open');
+  if (s.time && !s.isNone) document.getElementById('snack-content').classList.add('open');
+  else document.getElementById('snack-content').classList.remove('open');
 
   const l = r.lunch || {};
   setBadge('badge-lunch', l.time);
@@ -1468,12 +1519,13 @@ function loadRecordIntoForm(dateStr) {
   setSelectValueSafely('d_alcAmount', d.alcAmount);
 
   const ln = r.latenight || {};
-  setBadge('badge-latenight', ln.time);
+  setBadge('badge-latenight', ln.time, ln.isNone);
   currentSelections.latenight = ln.items ? JSON.parse(JSON.stringify(ln.items)) : [];
   renderTray('latenight');
   setSelectValueSafely('ln_alcType', ln.alcType);
   setSelectValueSafely('ln_alcAmount', ln.alcAmount);
-  if (ln.time) document.getElementById('latenight-content').classList.add('open');
+  if (ln.time && !ln.isNone) document.getElementById('latenight-content').classList.add('open');
+  else document.getElementById('latenight-content').classList.remove('open');
 
   const n = r.night || {};
   setBadge('badge-night', n.time);
@@ -1700,8 +1752,10 @@ function saveSlot(slot) {
     document.getElementById('badge-lunch').className = 'time-badge recorded';
     setSlotCardCollapsed('lunch', true);
   } else if (slot === 'snack') {
+    const isNone = (currentSelections.snack.length === 0);
     r.snack.time = nowTime;
-    document.getElementById('badge-snack').textContent = `記録済 ${nowTime}`;
+    r.snack.isNone = isNone;
+    document.getElementById('badge-snack').textContent = isNone ? `記録済 (飲食なし)` : `記録済 ${nowTime}`;
     document.getElementById('badge-snack').className = 'time-badge recorded';
     document.getElementById('snack-content').classList.remove('open');
   } else if (slot === 'dinner') {
@@ -1710,8 +1764,10 @@ function saveSlot(slot) {
     document.getElementById('badge-dinner').className = 'time-badge recorded';
     setSlotCardCollapsed('dinner', true);
   } else if (slot === 'latenight') {
+    const isNone = (currentSelections.latenight.length === 0 && (!r.latenight?.alcAmount || r.latenight?.alcAmount === 'なし'));
     r.latenight.time = nowTime;
-    document.getElementById('badge-latenight').textContent = `記録済 ${nowTime}`;
+    r.latenight.isNone = isNone;
+    document.getElementById('badge-latenight').textContent = isNone ? `記録済 (飲食なし)` : `記録済 ${nowTime}`;
     document.getElementById('badge-latenight').className = 'time-badge recorded';
     document.getElementById('latenight-content').classList.remove('open');
   } else if (slot === 'night') {
@@ -1908,7 +1964,7 @@ function refreshDashboard() {
 
     if (idx >= dateList.length - 7) {
       allItems.forEach(it => {
-        if (it.name.includes('野菜') || it.name.includes('サラダ') || it.name.includes('おひたし') || it.name.includes('きんぴら') || it.name.includes('ひじき') || it.name.includes('野菜ジュース')) {
+        if (it.name.includes('野菜') || it.name.includes('サラダ') || it.name.includes('おひたし') || it.name.includes('きんぴら') || it.name.includes('ひじき') || it.name.includes('野菜ジュース') || it.name.includes('ミネストローネ')) {
           weekVegCount++;
         }
         if (it.name.includes('魚') || it.name.includes('刺身')) {
@@ -2063,7 +2119,7 @@ function updateStreakDisplay() {
 
 function exportFullJSON() {
   const fullBackup = {
-    version: "v1.1.1",
+    version: "v1.2.0",
     exportedAt: new Date().toISOString(),
     profile: userProfile,
     meds: medMaster,
@@ -2244,7 +2300,7 @@ function importDataFromCSV(event) {
             mealType: c[13] || '家食',
             items: parseItemsFromCSV(c[14])
           },
-          snack: { time: c[15] || null, items: parseItemsFromCSV(c[16]) },
+          snack: { time: c[15] || null, items: parseItemsFromCSV(c[16]), isNone: false },
           lunch: {
             time: c[17] || null,
             bpSys: c[18] ? parseFloat(c[18]) : null,
@@ -2265,7 +2321,7 @@ function importDataFromCSV(event) {
             alcType: c[31] || null,
             alcAmount: c[32] || null
           },
-          latenight: { time: c[33] || null, items: parseItemsFromCSV(c[34]), alcType: c[35] || null, alcAmount: c[36] || null },
+          latenight: { time: c[33] || null, items: parseItemsFromCSV(c[34]), alcType: c[35] || null, alcAmount: c[36] || null, isNone: false },
           night: {
             time: c[37] || null,
             bpSys: c[38] ? parseFloat(c[38]) : null,
