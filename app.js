@@ -1,4 +1,4 @@
-// [稼働Ver v1.2.0 作業版 Rev.1] ミネストローネの追加、メニュー短縮チップ表示、トレイ追加時ハイライト演出、終了条件統一
+// [稼働Ver v1.2.1 作業版 Rev.1] バージョン一元取得化(index.html参照)、メニュー体系順ソート、No列廃止に伴うテーブル描画最適化
 
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
 const MASTER_KEY_SETTINGS = 'health_kun_data_master_settings';
@@ -185,8 +185,9 @@ const SUBTYPES_DEF = {
   ]
 };
 
-// 全メニューマスター
+// 全メニューマスター（体系順ソート版）
 const DEFAULT_50_MENUS = [
+  // 🍚 主食 (15品)
   { id: 1,  cat: "主食", name: "ご飯・白米",       m: true,  l: true,  d: true,  ln: false, cal: 240, salt: 0.0 },
   { id: 2,  cat: "主食", name: "玄米・雑穀米",     m: true,  l: true,  d: true,  ln: false, cal: 230, salt: 0.0 },
   { id: 3,  cat: "主食", name: "食パン・トースト", m: true,  l: false, d: false, ln: false, cal: 160, salt: 0.8 },
@@ -203,6 +204,7 @@ const DEFAULT_50_MENUS = [
   { id: 53, cat: "主食", name: "チャーハン・炒飯", m: false, l: true,  d: true,  ln: true,  cal: 580, salt: 2.5 },
   { id: 54, cat: "主食", name: "カレーライス",     m: false, l: true,  d: true,  ln: false, cal: 680, salt: 2.8 },
 
+  // 🍲 汁物 (6品)
   { id: 14, cat: "汁物", name: "味噌汁(豆腐/わかめ)", m: true, l: true, d: true, ln: false, cal: 40, salt: 1.2 },
   { id: 15, cat: "汁物", name: "豚汁・けんちん汁",   m: false, l: true, d: true, ln: false, cal: 120, salt: 1.4 },
   { id: 16, cat: "汁物", name: "野菜コンソメスープ", m: true, l: true, d: true, ln: true,  cal: 40, salt: 1.0 },
@@ -210,6 +212,7 @@ const DEFAULT_50_MENUS = [
   { id: 18, cat: "汁物", name: "ポタージュ濃縮汁",   m: true, l: true, d: false, ln: false, cal: 95, salt: 1.0 },
   { id: 56, cat: "汁物", name: "ミネストローネ",     m: true, l: true, d: true, ln: true,  cal: 70, salt: 1.1 },
 
+  // 🥩 おかず (21品)
   { id: 19, cat: "おかず", name: "焼き魚・煮魚",       m: true,  l: true,  d: true, ln: false, cal: 160, salt: 1.1 },
   { id: 20, cat: "おかず", name: "刺身・生魚",         m: false, l: true,  d: true, ln: false, cal: 120, salt: 0.6 },
   { id: 21, cat: "おかず", name: "鶏唐揚げ・チキン",   m: false, l: true,  d: true, ln: true,  cal: 280, salt: 1.0 },
@@ -232,18 +235,21 @@ const DEFAULT_50_MENUS = [
   { id: 38, cat: "おかず", name: "惣菜揚げ物(コロッケ等)", m: false, l: true, d: true, ln: false, cal: 200, salt: 0.8 },
   { id: 39, cat: "おかず", name: "その他・残り物惣菜", m: true,  l: true,  d: true, ln: true,  cal: 150, salt: 0.8 },
 
+  // ☕ 飲料 (5品)
   { id: 40, cat: "飲料", name: "コーヒー",             m: true,  l: true,  d: true, ln: true,  cal: 5,  salt: 0.0 },
   { id: 41, cat: "飲料", name: "ノンアルソーダ",       m: true,  l: true,  d: true, ln: true,  cal: 15, salt: 0.0 },
   { id: 42, cat: "飲料", name: "ヤクルト",             m: true,  l: true,  d: false, ln: false, cal: 50, salt: 0.0 },
   { id: 43, cat: "飲料", name: "野菜ジュース",         m: true,  l: true,  d: true, ln: true,  cal: 70, salt: 0.1 },
   { id: 44, cat: "飲料", name: "オロナミンC",         m: true,  l: true,  d: false, ln: true,  cal: 79, salt: 0.0 },
 
+  // 🍪 間食 (5品)
   { id: 45, cat: "間食", name: "チョコレート",         m: false, l: false, d: false, ln: false, cal: 140, salt: 0.0 },
   { id: 46, cat: "間食", name: "スナック菓子",         m: false, l: false, d: false, ln: false, cal: 165, salt: 0.4 },
   { id: 47, cat: "間食", name: "和菓子・せんべい",     m: false, l: false, d: false, ln: false, cal: 130, salt: 0.3 },
   { id: 51, cat: "間食", name: "ショートケーキ",       m: false, l: false, d: false, ln: false, cal: 340, salt: 0.2 },
   { id: 52, cat: "間食", name: "アイスクリーム",       m: false, l: false, d: false, ln: false, cal: 180, salt: 0.1 },
 
+  // 🍜 夜食 (3品)
   { id: 48, cat: "夜食", name: "カップラーメン(麺)",   m: false, l: false, d: false, ln: true,  cal: 350, salt: 2.5 },
   { id: 49, cat: "夜食", name: "お茶漬け・雑炊",       m: false, l: false, d: false, ln: true,  cal: 180, salt: 1.2 },
   { id: 50, cat: "夜食", name: "深夜スナック・おつまみ", m: false, l: false, d: false, ln: true, cal: 160, salt: 0.6 }
@@ -308,6 +314,11 @@ function getTodayString() {
 function getCurrentTimeString() {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function getAppVersion() {
+  const badge = document.getElementById('appVersionBadge');
+  return badge ? badge.textContent.trim() : 'v1.2.1';
 }
 
 function openDatePicker() {
@@ -493,12 +504,14 @@ function migratePastVersions() {
       if (!existing.some(x => x.name.includes("ミネストローネ"))) {
         existing.push({ id: 56, cat: "汁物", name: "ミネストローネ", m: true, l: true, d: true, ln: true, cal: 70, salt: 1.1 });
       }
-      const uIdx = existing.findIndex(x => x.name === "うどん");
-      if (uIdx !== -1) existing[uIdx].salt = 2.2;
-      const soIdx = existing.findIndex(x => x.name === "蕎麦");
-      if (soIdx !== -1) existing[soIdx].salt = 2.0;
-      const rIdx = existing.findIndex(x => x.name === "ラーメン・中華麺");
-      if (rIdx !== -1) existing[rIdx].salt = 2.4;
+
+      const orderMap = {};
+      DEFAULT_50_MENUS.forEach((item, idx) => { orderMap[item.name] = idx; });
+      existing.sort((a, b) => {
+        const orderA = orderMap[a.name] !== undefined ? orderMap[a.name] : 999;
+        const orderB = orderMap[b.name] !== undefined ? orderMap[b.name] : 999;
+        return orderA - orderB;
+      });
 
       localStorage.setItem(MASTER_KEY_MENUS, JSON.stringify(existing));
     } catch (e) {}
@@ -899,15 +912,14 @@ function renderMenuMasterTable() {
   menuMaster.forEach((item, index) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="center" style="color:var(--text-muted); font-size:0.7rem;">${index + 1}</td>
       <td class="center"><span class="cat-badge cat-badge-${item.cat}">${item.cat}</span></td>
       <td><input type="text" class="table-input in-name" value="${escapeHtml(item.name)}"></td>
       <td class="center"><input type="checkbox" class="in-m" ${item.m ? 'checked' : ''}></td>
       <td class="center"><input type="checkbox" class="in-l" ${item.l ? 'checked' : ''}></td>
       <td class="center"><input type="checkbox" class="in-d" ${item.d ? 'checked' : ''}></td>
       <td class="center"><input type="checkbox" class="in-ln" ${item.ln ? 'checked' : ''}></td>
-      <td><input type="number" class="table-input in-cal" value="${item.cal ?? 0}"></td>
-      <td><input type="number" step="0.1" class="table-input in-salt" value="${item.salt ?? 0}"></td>
+      <td><input type="number" class="table-input table-input-compact in-cal" value="${item.cal ?? 0}"></td>
+      <td><input type="number" step="0.1" class="table-input table-input-compact in-salt" value="${item.salt ?? 0}"></td>
     `;
     tbody.appendChild(tr);
   });
@@ -2119,7 +2131,7 @@ function updateStreakDisplay() {
 
 function exportFullJSON() {
   const fullBackup = {
-    version: "v1.2.0",
+    version: getAppVersion(),
     exportedAt: new Date().toISOString(),
     profile: userProfile,
     meds: medMaster,
