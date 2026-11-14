@@ -1,4 +1,4 @@
-// [稼働Ver 作業版 Rev.15] 2行スマートテンキー制御・卵6種サブメニュー拡充・メニューマスタ誤操作防止ロック
+// [稼働Ver 作業版 Rev.16] 卵の量ラベル修正(半量/1個/2個)・日次特記メモ保存＆読み込み連動
 
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
 const MASTER_KEY_SETTINGS = 'health_kun_data_master_settings';
@@ -363,7 +363,7 @@ function getCurrentTimeString() {
 
 function getAppVersion() {
   const badge = document.getElementById('appVersionBadge');
-  return badge ? badge.textContent.trim() : 'v1.4.1';
+  return badge ? badge.textContent.trim() : 'v1.4.2';
 }
 
 function openDatePicker() {
@@ -493,31 +493,31 @@ function rotateTodayHealthTip() {
 
 function migratePastVersions() {
   if (!localStorage.getItem(MASTER_KEY_RECORDS)) {
-    for (let v = 14; v >= 1; v--) {
+    for (let v = 15; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_records_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_RECORDS, past); break; }
     }
   }
   if (!localStorage.getItem(MASTER_KEY_SETTINGS)) {
-    for (let v = 14; v >= 1; v--) {
+    for (let v = 15; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_settings_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_SETTINGS, past); break; }
     }
   }
   if (!localStorage.getItem(MASTER_KEY_MENUS)) {
-    for (let v = 14; v >= 1; v--) {
+    for (let v = 15; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_menus_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_MENUS, past); break; }
     }
   }
   if (!localStorage.getItem(MASTER_KEY_MEDS)) {
-    for (let v = 14; v >= 1; v--) {
+    for (let v = 15; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_meds_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_MEDS, past); break; }
     }
   }
   if (!localStorage.getItem(MASTER_KEY_PROFILE)) {
-    for (let v = 14; v >= 1; v--) {
+    for (let v = 15; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_profile_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_PROFILE, past); break; }
     }
@@ -621,7 +621,6 @@ window.addEventListener('DOMContentLoaded', () => {
 function initSmartNumpadListeners() {
   const inputs = document.querySelectorAll('.smart-num-input');
   inputs.forEach(input => {
-    // スマホでのOSキーボードポップアップを防止しつつ独自テンキーを起動
     input.setAttribute('inputmode', 'none');
     input.addEventListener('focus', () => openSmartNumpad(input));
     input.addEventListener('click', () => openSmartNumpad(input));
@@ -662,7 +661,6 @@ function openSmartNumpad(inputEl) {
 
   wrap.classList.add('open');
 
-  // 入力欄がテンキーに隠れないよう画面内にスクロール
   setTimeout(() => {
     inputEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 100);
@@ -702,7 +700,6 @@ function pressNumKey(char) {
     if (cur === '') cur = '0';
   }
 
-  // 先頭の余計なゼロを整理
   if (cur === '0' && char !== '.') {
     cur = char;
   } else {
@@ -733,7 +730,6 @@ function pressNumNext() {
   if (!activeNumpadInputEl) return;
 
   const inputs = Array.from(document.querySelectorAll('.smart-num-input')).filter(el => {
-    // 現在画面に表示されているフィールドのみを対象とする
     return el.offsetParent !== null;
   });
 
@@ -742,7 +738,6 @@ function pressNumNext() {
     const nextInput = inputs[curIdx + 1];
     openSmartNumpad(nextInput);
   } else {
-    // 最後の入力欄の場合は自動で完了・閉じる
     closeSmartNumpad();
   }
 }
@@ -1325,10 +1320,14 @@ function calcEffectiveItemStats(item) {
   const isHamburg = item.name.includes('ハンバーグ');
   const isTonkatsu = item.name.includes('とんかつ');
   const isSushi = item.name.includes('寿司');
+  const isEgg = item.name.includes('卵');
 
   let mult = 1.0;
   if (isSnack) {
     mult = item.amount === '少ない' ? 0.35 : (item.amount === '多い' ? 2.0 : 1.0);
+  } else if (isEgg) {
+    // 卵の量：少＝半量(0.5倍) / 普＝1個(1.0倍) / 多＝2個(2.0倍)
+    mult = item.amount === '少ない' ? 0.5 : (item.amount === '多い' ? 2.0 : 1.0);
   } else if (isSteak) {
     mult = item.amount === '少ない' ? 0.6 : (item.amount === '多い' ? 1.75 : 1.0);
   } else if (isHamburg) {
@@ -1471,8 +1470,9 @@ function renderTray(slot) {
       btnLabelLess = "小鉢"; btnLabelNorm = "1人前"; btnLabelMore = "大皿";
       btnTitleLess = "小鉢サイズ"; btnTitleNorm = "標準1人前"; btnTitleMore = "大皿シェア";
     } else if (item.name.includes("卵")) {
-      btnLabelLess = "1個"; btnLabelNorm = "1個"; btnLabelMore = "2個";
-      btnTitleLess = "1個"; btnTitleNorm = "1個(標準)"; btnTitleMore = "2個(多め)";
+      // 卵の量：違和感を解消し「半量 / 1個 / 2個」に整列
+      btnLabelLess = "半量"; btnLabelNorm = "1個"; btnLabelMore = "2個";
+      btnTitleLess = "半量(0.5個分)"; btnTitleNorm = "標準(1個)"; btnTitleMore = "多め(2個分)";
     }
 
     const div = document.createElement('div');
@@ -1738,6 +1738,9 @@ function autoSaveField(slot) {
     r.night.moodStatus = document.getElementById('n_moodStatus').value || null;
     const nw = parseFloat(document.getElementById('daily_weight').value) || null;
     if (nw) r.weight = nw;
+
+    // 📝 本日の体調・食事特記メモの自動保存
+    r.memo = (document.getElementById('daily_memo')?.value || '').trim();
   }
 
   const nut = calculateDayNutrients();
@@ -1828,6 +1831,10 @@ function loadRecordIntoForm(dateStr) {
   setSelectValueSafely('n_bowelStatus', n.bowelStatus);
   setSelectValueSafely('n_moodStatus', n.moodStatus);
   document.getElementById('daily_weight').value = r.weight || '';
+
+  // 📝 本日のメモ欄の復元
+  const memoEl = document.getElementById('daily_memo');
+  if (memoEl) memoEl.value = r.memo || '';
 
   updateCardCompletionStates(r);
   rebuildMedChipsUI();
@@ -2581,7 +2588,7 @@ function exportDataToCSV() {
     "昼_時刻", "昼_上血圧", "昼_下血圧", "昼_脈拍", "昼_服薬", "昼_場所", "昼_内訳",
     "晩_時刻", "晩_上血圧", "晩_下血圧", "晩_脈拍", "晩_服薬", "晩_場所", "晩_内訳", "晩_酒種", "晩_酒量",
     "夜食_時刻", "夜食_内訳", "夜食_酒種", "夜食_酒量",
-    "就寝_時刻", "就寝_上血圧", "就寝_下血圧", "就寝_服薬", "お通じ", "体調・気分"
+    "就寝_時刻", "就寝_上血圧", "就寝_下血圧", "就寝_服薬", "お通じ", "体調・気分", "特記メモ"
   ];
 
   const rows = dates.map(d => {
@@ -2600,7 +2607,8 @@ function exportDataToCSV() {
       l.time ?? '', l.bpSys ?? '', l.bpDia ?? '', l.pulse ?? '', (l.meds || []).join(';'), l.mealType ?? '', `"${formatItemsForCSV(l.items)}"`,
       din.time ?? '', din.bpSys ?? '', din.bpDia ?? '', din.pulse ?? '', (din.meds || []).join(';'), din.mealType ?? '', `"${formatItemsForCSV(din.items)}"`, `"${din.alcType || ''}"`, `"${din.alcAmount || ''}"`,
       ln.time ?? '', `"${formatItemsForCSV(ln.items)}"`, `"${ln.alcType || ''}"`, `"${ln.alcAmount || ''}"`,
-      n.time ?? '', n.bpSys ?? '', n.bpDia ?? '', (n.meds || []).join(';'), n.bowelStatus ?? '', n.moodStatus ?? ''
+      n.time ?? '', n.bpSys ?? '', n.bpDia ?? '', (n.meds || []).join(';'), n.bowelStatus ?? '', n.moodStatus ?? '',
+      `"${r.memo ? r.memo.replace(/"/g, '""') : ''}"`
     ];
   });
 
@@ -2676,7 +2684,8 @@ function importDataFromCSV(event) {
             meds: c[40] ? c[40].split(';') : [],
             bowelStatus: c[41] || null,
             moodStatus: c[42] || null
-          }
+          },
+          memo: c[43] || ''
         };
       }
 
@@ -2737,7 +2746,7 @@ function factoryResetAll() {
   localStorage.removeItem(MASTER_KEY_MEDS);
   localStorage.removeItem(MASTER_KEY_PROFILE);
 
-  for (let v = 1; v <= 14; v++) {
+  for (let v = 1; v <= 15; v++) {
     localStorage.removeItem(`health_kun_records_v${v}`);
     localStorage.removeItem(`health_kun_settings_v${v}`);
     localStorage.removeItem(`health_kun_menus_v${v}`);
