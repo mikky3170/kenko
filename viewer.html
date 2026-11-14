@@ -1,0 +1,1510 @@
+<!-- [稼働Ver 作業版 Rev.1] PC大画面特化型 臨床分析・PFC栄養素バランス・メニュー認識辞書・医師提出A4レポートビューワー新規作成 -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>健康管理くん - PCプロフェッショナル・ビューワー＆臨床カルテ</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-body: #0b0f19;
+      --bg-card: #121927;
+      --bg-card-sub: #182235;
+      --bg-input: #1d283f;
+      --border: #283654;
+      --border-focus: #38bdf8;
+      --text-main: #f1f5f9;
+      --text-muted: #8b9bb4;
+      --accent-blue: #38bdf8;
+      --accent-green: #34d399;
+      --accent-rose: #fb7185;
+      --accent-amber: #fbbf24;
+      --accent-purple: #c084fc;
+      --radius: 10px;
+      --transition: all 0.15s ease;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { background-color: var(--bg-body); color: var(--text-main); line-height: 1.45; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* 上部ヘッダー */
+    header {
+      background: rgba(15, 23, 42, 0.98); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100; backdrop-filter: blur(8px);
+      padding: 10px 20px;
+    }
+    .header-inner {
+      max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    }
+    .brand-box { display: flex; align-items: center; gap: 10px; }
+    .brand-title { font-size: 1.15rem; font-weight: 900; color: #ffffff; letter-spacing: 0.5px; }
+    .brand-title span { color: var(--accent-blue); }
+    .viewer-badge {
+      font-size: 0.72rem; font-weight: 800; background: rgba(56, 189, 248, 0.15);
+      border: 1px solid var(--accent-blue); color: var(--accent-blue);
+      padding: 2px 8px; border-radius: 6px;
+    }
+
+    .nav-tabs { display: flex; gap: 4px; background: #080c16; padding: 3px; border-radius: 8px; border: 1px solid var(--border); }
+    .tab-btn {
+      padding: 6px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 800;
+      color: var(--text-muted); cursor: pointer; background: transparent; border: none;
+      transition: var(--transition); display: inline-flex; align-items: center; gap: 5px;
+    }
+    .tab-btn.active { background: var(--bg-input); color: #ffffff; border: 1px solid var(--accent-blue); }
+
+    .header-right-tools { display: flex; align-items: center; gap: 10px; }
+    .data-source-indicator {
+      font-size: 0.74rem; font-weight: 700; color: var(--accent-green);
+      background: rgba(52, 211, 153, 0.12); padding: 4px 10px; border-radius: 6px;
+      border: 1px solid rgba(52, 211, 153, 0.3); display: flex; align-items: center; gap: 6px;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;
+      cursor: pointer; border: none; transition: var(--transition);
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-blue { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; }
+    .btn-green { background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+    .btn-outline:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+    /* メインコンテナ */
+    main { flex: 1; max-width: 1400px; width: 100%; margin: 0 auto; padding: 16px 20px 40px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* 共通カード */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 0.95rem; font-weight: 800; color: #ffffff;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; border-bottom: 1px solid rgba(40, 54, 84, 0.5); padding-bottom: 8px;
+    }
+
+    /* グリッドレイアウト */
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+    /* 統計ハイライトボックス */
+    .stat-box {
+      background: var(--bg-card-sub); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 3px;
+    }
+    .stat-label { font-size: 0.74rem; font-weight: 700; color: var(--text-muted); }
+    .stat-val { font-size: 1.4rem; font-weight: 900; color: #ffffff; display: flex; align-items: baseline; gap: 4px; }
+    .stat-unit { font-size: 0.72rem; color: var(--text-muted); font-weight: normal; }
+    .stat-sub { font-size: 0.7rem; color: var(--text-muted); }
+
+    /* チャート枠 */
+    .chart-container-large { position: relative; height: 300px; width: 100%; margin-top: 6px; }
+    .chart-container-medium { position: relative; height: 230px; width: 100%; margin-top: 6px; }
+
+    /* フィルター・コントローラー */
+    .filter-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 10px; margin-bottom: 14px; background: var(--bg-card-sub);
+      padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
+    }
+    .filter-group { display: flex; align-items: center; gap: 8px; }
+    .filter-label { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); }
+    .form-select, .form-input {
+      background: var(--bg-input); border: 1px solid var(--border);
+      color: var(--text-main); font-size: 0.82rem; font-weight: 700;
+      padding: 5px 10px; border-radius: 6px; outline: none;
+    }
+    .form-select:focus, .form-input:focus { border-color: var(--accent-blue); }
+
+    /* =========================================================
+       TAB 1: 食品・PFC栄養素認識辞書テーブル
+       ========================================================= */
+    .table-scroll { max-height: 680px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+    .dict-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; text-align: left; }
+    .dict-table th {
+      background: #080d1a; color: var(--text-muted); font-weight: 800;
+      padding: 8px 10px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 var(--border);
+      white-space: nowrap;
+    }
+    .dict-table td {
+      padding: 7px 10px; border-bottom: 1px solid rgba(40, 54, 84, 0.5);
+      vertical-align: middle;
+    }
+    .dict-table tr:hover { background: rgba(56, 189, 248, 0.05); }
+
+    .cat-badge { font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; font-weight: 800; white-space: nowrap; display: inline-block; }
+    .cat-主食 { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+    .cat-汁物 { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+    .cat-おかず { background: rgba(251, 113, 133, 0.2); color: #fb7185; }
+    .cat-飲料 { background: rgba(34, 211, 238, 0.2); color: #22d3ee; }
+    .cat-間食 { background: rgba(251, 191, 36, 0.25); color: #fde047; }
+    .cat-夜食 { background: rgba(192, 132, 252, 0.25); color: #c084fc; }
+
+    .portion-tag {
+      background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border);
+      padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; color: var(--accent-amber);
+    }
+    .sub-item-box {
+      background: rgba(8, 12, 22, 0.5); border-left: 2px solid var(--accent-blue);
+      padding: 3px 6px; margin: 3px 0; border-radius: 0 4px 4px 0; font-size: 0.72rem;
+    }
+
+    /* =========================================================
+       TAB 2: Gemini API AIカンファレンス & 臨床コラム
+       ========================================================= */
+    .ai-conference-card {
+      background: linear-gradient(135deg, #111a2f, #15223c);
+      border: 1px solid var(--accent-blue); border-radius: var(--radius);
+      padding: 16px; margin-bottom: 16px;
+    }
+    .ai-api-setup-bar {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+      background: rgba(0,0,0,0.3); padding: 8px 12px; border-radius: 6px;
+    }
+    .conference-output-box {
+      background: rgba(8, 12, 22, 0.8); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px; min-height: 120px; font-size: 0.82rem; line-height: 1.6;
+    }
+    .conf-doc { border-left: 3px solid var(--accent-blue); padding-left: 10px; margin-bottom: 10px; }
+    .conf-nut { border-left: 3px solid var(--accent-green); padding-left: 10px; }
+
+    /* =========================================================
+       TAB 3: 医師提出用 A4クリニック・レポート
+       ========================================================= */
+    .report-preview-wrap {
+      background: #ffffff; color: #1e293b; border-radius: 8px;
+      padding: 24px 30px; max-width: 980px; margin: 0 auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-size: 11pt; line-height: 1.4;
+    }
+    .rep-header {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 14px;
+    }
+    .rep-title { font-size: 16pt; font-weight: 900; color: #0f172a; }
+    .rep-meta { font-size: 9pt; color: #475569; text-align: right; }
+    
+    .rep-profile-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+      background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px;
+      padding: 10px 14px; margin-bottom: 14px; font-size: 9.5pt;
+    }
+    .rep-prof-item b { color: #0f172a; }
+
+    .rep-summary-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 9.5pt; }
+    .rep-summary-table th, .rep-summary-table td {
+      border: 1px solid #cbd5e1; padding: 6px 10px; text-align: center;
+    }
+    .rep-summary-table th { background: #f1f5f9; color: #334155; font-weight: bold; }
+
+    .rep-eval-box {
+      background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #2563eb;
+      padding: 8px 12px; margin-bottom: 14px; border-radius: 4px; font-size: 9.5pt; color: #1e3a8a;
+    }
+
+    .rep-chart-wrap { height: 180px; width: 100%; margin-bottom: 14px; }
+
+    .rep-daily-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; text-align: center; }
+    .rep-daily-table th, .rep-daily-table td {
+      border: 1px solid #cbd5e1; padding: 4px 6px;
+    }
+    .rep-daily-table th { background: #f1f5f9; color: #334155; }
+    .rep-daily-table tr:nth-child(even) { background: #f8fafc; }
+
+    /* 印刷スタイル最適化 */
+    @media print {
+      body { background: #ffffff !important; color: #000000 !important; }
+      header, .no-print { display: none !important; }
+      main { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+      .tab-content { display: none !important; }
+      #reportTab { display: block !important; }
+      .report-preview-wrap { box-shadow: none !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; }
+      .rep-header { border-bottom-color: #000000 !important; }
+      .rep-summary-table th, .rep-daily-table th { background: #e2e8f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .rep-eval-box { background: #f1f5f9 !important; border-left-color: #000000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 上部固定ヘッダー -->
+<header>
+  <div class="header-inner">
+    <div class="brand-box">
+      <h1 class="brand-title">🩺 健康管理くん <span>PC Viewer</span></h1>
+      <span class="viewer-badge">Professional Clinical Suite</span>
+    </div>
+
+    <nav class="nav-tabs no-print">
+      <button class="tab-btn active" data-tab="dictTab" onclick="switchViewerTab('dictTab')">🍱 食品・PFC認識辞書</button>
+      <button class="tab-btn" data-tab="analysisTab" onclick="switchViewerTab('analysisTab')">📊 多角臨床ダッシュボード</button>
+      <button class="tab-btn" data-tab="reportTab" onclick="switchViewerTab('reportTab')">🖨️ 医師提出用A4レポート</button>
+    </nav>
+
+    <div class="header-right-tools no-print">
+      <div class="data-source-indicator" id="syncStatusBadge">
+        <span style="font-size:0.9rem;">●</span> <span id="syncStatusText">ローカル同期中</span>
+      </div>
+      <button class="btn btn-outline" onclick="document.getElementById('viewerJsonInput').click()">📂 JSON読込</button>
+      <input type="file" id="viewerJsonInput" accept=".json" style="display:none;" onchange="importViewerJSON(event)">
+      <button class="btn btn-blue" onclick="window.print()">🖨️ レポート印刷/PDF</button>
+    </div>
+  </div>
+</header>
+
+<!-- メインコンテンツ -->
+<main>
+
+  <!-- =========================================================
+       TAB 1: 食品・PFC栄養素認識辞書（認識合わせ用）
+       ========================================================= -->
+  <section id="dictTab" class="tab-content active">
+    
+    <div class="filter-bar no-print">
+      <div class="filter-group">
+        <span class="filter-label">区分絞り込み:</span>
+        <select id="dictCatFilter" class="form-select" onchange="renderDictTable()">
+          <option value="ALL">全区分 (全品表示)</option>
+          <option value="主食">🍚 主食</option>
+          <option value="汁物">🍲 汁物</option>
+          <option value="おかず">🥩 おかず</option>
+          <option value="飲料">☕ 飲料</option>
+          <option value="間食">🍪 間食</option>
+          <option value="夜食">🍜 夜食</option>
+        </select>
+      </div>
+
+      <div class="filter-group">
+        <span class="filter-label">キーワード検索:</span>
+        <input type="text" id="dictSearchInput" class="form-input" placeholder="例: ステーキ、寿司、丼、豆乳" oninput="renderDictTable()">
+      </div>
+
+      <div style="font-size:0.75rem; color:var(--text-muted);">
+        ※日本食品標準成分表（八訂）に基づくPFC（タンパク質/脂質/炭水化物）推計基準値を完全網羅
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>📖 食品パーツ・想定ポーション＆PFC代謝基準値 一覧（全品マスター）</span>
+        <span style="font-size:0.75rem; color:var(--accent-blue); font-weight:normal;" id="dictItemCount">50品</span>
+      </div>
+
+      <div class="table-scroll">
+        <table class="dict-table">
+          <thead>
+            <tr>
+              <th style="width: 60px;">区分</th>
+              <th style="width: 140px;">メニュー名</th>
+              <th style="width: 180px;">基準ポーション（「普通」の想定）</th>
+              <th style="width: 180px;">少 / 普 / 多 のレベル感目安</th>
+              <th style="width: 70px; text-align:right;">kcal</th>
+              <th style="width: 65px; text-align:right;">塩分</th>
+              <th style="width: 70px; text-align:right; color:#60a5fa;">P (蛋白)</th>
+              <th style="width: 70px; text-align:right; color:#fb7185;">F (脂質)</th>
+              <th style="width: 70px; text-align:right; color:#fbbf24;">C (糖質)</th>
+              <th style="width: 160px;">サブメニュー / 臨床減塩・相殺メモ</th>
+            </tr>
+          </thead>
+          <tbody id="dictTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- =========================================================
+       TAB 2: 多角臨床ダッシュボード（大画面・PFC・AIカンファレンス）
+       ========================================================= -->
+  <section id="analysisTab" class="tab-content">
+    
+    <div class="filter-bar no-print">
+      <div class="filter-group">
+        <span class="filter-label">分析期間:</span>
+        <select id="analysisPeriodSelect" class="form-select" onchange="refreshAnalysis()">
+          <option value="14d" selected>直近 2週間 (14日間)</option>
+          <option value="30d">直近 1ヶ月 (30日間)</option>
+          <option value="90d">直近 3ヶ月 (四半期)</option>
+          <option value="ALL">全記録データ</option>
+        </select>
+      </div>
+
+      <div style="font-size:0.75rem; color:var(--accent-green); font-weight:bold;" id="analysisDataRangeText">
+        対象データ：読み込み中...
+      </div>
+    </div>
+
+    <!-- AIカンファレンス・カード (Gemini API 連携) -->
+    <div class="ai-conference-card no-print">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:0.95rem; font-weight:800; color:#ffffff;">🤖 AI医療チーム総合カンファレンス (Dr.ケン ＆ 管理栄養士 アヤ)</span>
+        <button class="btn btn-green" id="btnRunAi" onclick="runAiConference()">✨ カンファレンスを実行・最新分析</button>
+      </div>
+      
+      <div class="ai-api-setup-bar">
+        <span style="font-size:0.75rem; color:var(--text-muted); white-space:nowrap;">Gemini API Key:</span>
+        <input type="password" id="geminiApiKeyInput" class="form-input" style="flex:1; max-width:320px;" placeholder="AIzaSy... (任意・入力するとAI直筆詳細カルテを生成)" onchange="saveGeminiApiKey()">
+        <span style="font-size:0.72rem; color:var(--text-muted);">※未入力時はJSH2019高血圧ガイドラインに基づく高精度ルールベース診断が自動作動します。</span>
+      </div>
+
+      <div class="conference-output-box" id="conferenceOutputArea">
+        「カンファレンスを実行」ボタンを押すと、期間中の朝晩血圧乖離・脈圧・PFCバランス・睡眠を網羅した詳細な臨床カルテと栄養指導を生成します。
+      </div>
+    </div>
+
+    <!-- 臨床バイタル サマリーカード -->
+    <div class="grid-4" style="margin-bottom:14px;">
+      <div class="stat-box">
+        <span class="stat-label">朝血圧 (平均 / 7日SMA)</span>
+        <div class="stat-val" id="stat_m_bp">-- / -- <span class="stat-unit">mmHg</span></div>
+        <div class="stat-sub" id="stat_m_bp_sub">家庭至適: 125/75未満</div>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">就寝前血圧 (平均)</span>
+        <div class="stat-val" id="stat_n_bp">-- / -- <span class="stat-unit">mmHg</span></div>
+        <div class="stat-sub" id="stat_n_bp_sub">夜間高血圧チェック</div>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">平均脈圧 (収縮期 - 拡張期)</span>
+        <div class="stat-val" id="stat_pp">-- <span class="stat-unit">mmHg</span></div>
+        <div class="stat-sub" id="stat_pp_sub">血管しなやかさ指標 (基準&lt;65)</div>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">推定平均食塩摂取量</span>
+        <div class="stat-val" id="stat_salt">-- <span class="stat-unit">g/日</span></div>
+        <div class="stat-sub" id="stat_salt_sub">学会推奨: 6.0g未満</div>
+      </div>
+    </div>
+
+    <!-- グラフエリア 1: 血圧 朝晩比較・モーニングサージ解析 ＆ PFCバランス -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">
+          <span>❤️ 朝晩血圧推移 ＆ モーニングサージ解析 (ME差)</span>
+          <span style="font-size:0.72rem; color:var(--text-muted);">── 赤:朝 / ── 紫:夜 / ── 緑:家庭基準(125)</span>
+        </div>
+        <div class="chart-container-large"><canvas id="viewerBpChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>🥗 推定PFCエネルギー比率（タンパク質・脂質・炭水化物）</span>
+          <span style="font-size:0.72rem; color:var(--text-muted);">理想: P 13-20% / F 20-30% / C 50-65%</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="width:180px; height:180px; position:relative; flex-shrink:0;">
+            <canvas id="viewerPfcPieChart"></canvas>
+          </div>
+          <div style="flex:1;" id="pfcMetricsSummaryBox">
+            <div style="font-size:0.78rem; line-height:1.6;" id="pfcTextDetail">
+              PFCデータを集計中...
+            </div>
+          </div>
+        </div>
+        <div class="chart-container-medium" style="height:120px; margin-top:10px;">
+          <canvas id="viewerPfcStackChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- グラフエリア 2: 体重＆歩数 ＆ 睡眠vs翌朝血圧 -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">
+          <span>⚖️ 体重トレンド ＆ 🚶 歩数相関</span>
+        </div>
+        <div class="chart-container-large"><canvas id="viewerWeightStepsChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>😴 睡眠時間 vs 翌朝最高血圧 相関トレンド</span>
+          <span style="font-size:0.72rem; color:var(--text-muted);">睡眠不足によるモーニングサージを検出</span>
+        </div>
+        <div class="chart-container-large"><canvas id="viewerSleepBpChart"></canvas></div>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- =========================================================
+       TAB 3: 医師提出用 A4クリニック・レポート（印刷最適化）
+       ========================================================= -->
+  <section id="reportTab" class="tab-content">
+    
+    <div class="filter-bar no-print" style="max-width:980px; margin:0 auto 16px;">
+      <div class="filter-group">
+        <span class="filter-label">レポート期間:</span>
+        <select id="reportPeriodSelect" class="form-select" onchange="generateDoctorReport()">
+          <option value="14d" selected>直近 2週間 (診察最適)</option>
+          <option value="30d">直近 1ヶ月</option>
+          <option value="60d">直近 2ヶ月</option>
+        </select>
+      </div>
+      <button class="btn btn-blue" onclick="window.print()">🖨️ A4印刷 / PDF保存</button>
+    </div>
+
+    <!-- A4印刷プレビュー枠 -->
+    <div class="report-preview-wrap" id="printableReportArea">
+      
+      <div class="rep-header">
+        <div>
+          <h2 class="rep-title">家庭血圧・生活習慣 臨床レポート</h2>
+          <div style="font-size:9pt; color:#475569; margin-top:2px;">日本高血圧学会 JSH2019 家庭血圧測定指針準拠</div>
+        </div>
+        <div class="rep-meta">
+          <div><b>提出日:</b> <span id="repIssueDate">2025年-月-日</span></div>
+          <div><b>対象期間:</b> <span id="repPeriodRange">2025/00/00 〜 2025/00/00</span></div>
+        </div>
+      </div>
+
+      <!-- 患者サマリー -->
+      <div class="rep-profile-grid">
+        <div class="rep-prof-item">年代/性別: <b id="repAgeGender">50代 男性</b></div>
+        <div class="rep-prof-item">身長/直近体重: <b id="repHeightWeight">172.0 cm / 68.0 kg</b></div>
+        <div class="rep-prof-item">BMI / 適正体重: <b id="repBmiStd">23.0 (適正 65.1kg)</b></div>
+        <div class="rep-prof-item">重点管理: <b id="repCares">高血圧, 脂質異常症</b></div>
+      </div>
+
+      <!-- 統計テーブル -->
+      <table class="rep-summary-table">
+        <thead>
+          <tr>
+            <th>項目</th>
+            <th>平均値</th>
+            <th>至適・推奨基準</th>
+            <th>期間内 最大 / 最小</th>
+            <th>臨床判定</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>🌅 起床時血圧 (朝)</b></td>
+            <td><b id="rep_avg_m_bp">-- / --</b> mmHg</td>
+            <td>125 / 75 未満</td>
+            <td id="rep_minmax_m_bp">-- / --</td>
+            <td id="rep_judge_m_bp">判定中</td>
+          </tr>
+          <tr>
+            <td><b>🛌 就寝前血圧 (夜)</b></td>
+            <td><b id="rep_avg_n_bp">-- / --</b> mmHg</td>
+            <td>125 / 75 未満</td>
+            <td id="rep_minmax_n_bp">-- / --</td>
+            <td id="rep_judge_n_bp">判定中</td>
+          </tr>
+          <tr>
+            <td><b>❤️ 脈圧 (収縮期 - 拡張期)</b></td>
+            <td><b id="rep_avg_pp">--</b> mmHg</td>
+            <td>65 未満 (血管弾性)</td>
+            <td id="rep_minmax_pp">-- / --</td>
+            <td id="rep_judge_pp">判定中</td>
+          </tr>
+          <tr>
+            <td><b>💊 処方薬・服薬遵守率</b></td>
+            <td><b id="rep_med_adherence">--</b> %</td>
+            <td>95% 以上</td>
+            <td>--</td>
+            <td id="rep_judge_med">判定中</td>
+          </tr>
+          <tr>
+            <td><b>🧂 推定食塩摂取量</b></td>
+            <td><b id="rep_avg_salt">--</b> g/日</td>
+            <td>6.0 g 未満</td>
+            <td id="rep_minmax_salt">-- / --</td>
+            <td id="rep_judge_salt">判定中</td>
+          </tr>
+          <tr>
+            <td><b>🚶 平均歩数 / 睡眠</b></td>
+            <td><b id="rep_avg_steps">--</b> 歩 / <b id="rep_avg_sleep">--</b> h</td>
+            <td>8,000歩 / 7.0h</td>
+            <td id="rep_minmax_steps">--</td>
+            <td>良好</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 医師向け臨床所見枠 -->
+      <div class="rep-eval-box" id="repClinicalEvaluationText">
+        <b>【循環器内科 臨床評価サマリー】:</b> 集計中です...
+      </div>
+
+      <!-- レポート内グラフ (血圧推移) -->
+      <div style="font-size:9pt; font-weight:bold; color:#0f172a; margin-bottom:4px;">■ 家庭血圧推移トレンド（朝・就寝前・至適基準線）</div>
+      <div class="rep-chart-wrap">
+        <canvas id="reportPrintChart"></canvas>
+      </div>
+
+      <!-- 日次記録一覧カルテ表 -->
+      <div style="font-size:9pt; font-weight:bold; color:#0f172a; margin-top:10px; margin-bottom:4px;">■ 日別 測定・生活習慣記録一覧（カルテ転記用）</div>
+      <table class="rep-daily-table">
+        <thead>
+          <tr>
+            <th style="width:75px;">日付</th>
+            <th style="width:85px;">朝血圧 (脈拍)</th>
+            <th style="width:85px;">夜血圧 (脈拍)</th>
+            <th style="width:45px;">脈圧</th>
+            <th style="width:45px;">服薬</th>
+            <th style="width:50px;">体重</th>
+            <th style="width:55px;">歩数</th>
+            <th style="width:45px;">塩分</th>
+            <th style="width:45px;">睡眠</th>
+            <th>主な食事・特記事項（飲酒・体調）</th>
+          </tr>
+        </thead>
+        <tbody id="repDailyTableBody"></tbody>
+      </table>
+
+    </div>
+
+  </section>
+
+</main>
+
+<script>
+// [稼働Ver 作業版 Rev.1] PC Viewer ロジック実装
+
+const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
+const MASTER_KEY_SETTINGS = 'health_kun_data_master_settings';
+const MASTER_KEY_MENUS = 'health_kun_data_master_menus';
+const MASTER_KEY_MEDS = 'health_kun_data_master_meds';
+const MASTER_KEY_PROFILE = 'health_kun_data_master_profile';
+const MASTER_KEY_GEMINI_KEY = 'health_kun_gemini_api_key';
+
+// 文部科学省「日本食品標準成分表（八訂）」に基づくPFC・ポーション完全辞書
+const COMPREHENSIVE_FOOD_DICT = [
+  // 🍚 主食
+  { cat: "主食", name: "ご飯・白米", portion: "お茶碗1杯 (約150g)", levels: "少:100g / 普:150g / 多:250g(大盛)", cal: 240, salt: 0.0, p: 3.8, f: 0.5, c: 55.7, memo: "精白米。糖質中心。玄米への置換でビタミンB群強化可" },
+  { cat: "主食", name: "玄米・雑穀米", portion: "お茶碗1杯 (約150g)", levels: "少:100g / 普:150g / 多:250g(大盛)", cal: 230, salt: 0.0, p: 4.2, f: 1.5, c: 51.3, memo: "食物繊維・マグネシウム・ビタミンB1豊富。血糖値急上昇抑制" },
+  { cat: "主食", name: "食パン・トースト", portion: "6枚切 1枚 (約60g)", levels: "少:8枚切 / 普:6枚切1枚 / 多:厚切(4枚切)", cal: 160, salt: 0.8, p: 5.6, f: 2.6, c: 28.0, memo: "製造時の食塩含む。バター・ジャム塗布量に注意" },
+  { cat: "主食", name: "ロール・惣菜パン", portion: "個包装 1個 (約80g)", levels: "少:小ぶり / 普:1個 / 多:2個(ボリューミー)", cal: 220, salt: 1.0, p: 6.5, f: 8.0, c: 30.5, memo: "菓子パン系は脂質・糖質上昇に留意" },
+  { cat: "主食", name: "うどん", portion: "茹で1玉 (約220g) つゆ残し", levels: "少:半玉 / 普:1玉(並) / 多:大盛(1.5玉)", cal: 320, salt: 2.2, p: 7.0, f: 1.2, c: 68.0, memo: "つゆを飲まない前提(約2.2g)。全飲みは約5.5g" },
+  { cat: "主食", name: "蕎麦", portion: "茹で1玉 (約200g) つゆ残し", levels: "少:半玉 / 普:1玉(並) / 多:大盛(1.5玉)", cal: 300, salt: 2.0, p: 10.5, f: 2.0, c: 58.0, memo: "ルチン（毛細血管保護成分）含有。GI値低め" },
+  { cat: "主食", name: "ラーメン・中華麺", portion: "生麺140g＋具 つゆ残し", levels: "少:半麺 / 普:1杯(並) / 多:大盛/替玉", cal: 450, salt: 2.4, p: 16.0, f: 14.0, c: 65.0, memo: "【サブタイプあり】中華そば/家系/二郎系/つけ麺。つゆ残し計算" },
+  { cat: "主食", name: "パスタ", portion: "乾麺80g＋ソース", levels: "少:60g / 普:80g(1人前) / 多:120g(大盛)", cal: 420, salt: 1.8, p: 13.0, f: 11.0, c: 67.0, memo: "トマトソース基準。カルボナーラ等は脂質＋15g" },
+  { cat: "主食", name: "おにぎり", portion: "コンビニおにぎり 1個(110g)", levels: "少:ミニ1個 / 普:1個 / 多:大きめ1個", cal: 180, salt: 0.5, p: 3.5, f: 0.6, c: 39.5, memo: "具材（梅・鮭・昆布等）により若干変動" },
+  { cat: "主食", name: "餅・シリアル類", portion: "切り餅2個 / シリアル40g", levels: "少:1個 / 普:2個(40g) / 多:3個以上", cal: 170, salt: 0.2, p: 3.0, f: 0.8, c: 37.0, memo: "消化吸収が速やか。朝のエネルギー補給向き" },
+  { cat: "主食", name: "牛丼", portion: "並盛 1杯 (ご飯250g+牛肉)", levels: "少:小盛 / 普:並盛 / 多:大盛/特盛", cal: 720, salt: 2.5, p: 20.0, f: 23.0, c: 102.0, memo: "つゆだくは塩分+0.8g。生野菜サラダ追加で相殺推奨" },
+  { cat: "主食", name: "天丼", portion: "並盛 1杯 (海老・野菜・タレ)", levels: "少:小天丼 / 普:並盛 / 多:特上/大盛", cal: 820, salt: 2.8, p: 18.0, f: 28.0, c: 118.0, memo: "衣の吸油率高め。夕食時はタレの塩分に注意" },
+  { cat: "主食", name: "うな丼", portion: "うなぎ半身〜1尾＋タレご飯", levels: "少:うな小丼 / 普:並(半身) / 多:上/特上(1尾)", cal: 750, salt: 2.2, p: 28.0, f: 24.0, c: 98.0, memo: "ビタミンA・DHA・EPA豊富。疲労回復効果高" },
+  { cat: "主食", name: "チャーハン・炒飯", portion: "並盛 1人前 (約300g)", levels: "少:半炒飯 / 普:並盛(1人前) / 多:大盛り", cal: 580, salt: 2.5, p: 14.0, f: 18.0, c: 86.0, memo: "【サブタイプあり】五目炒飯(620kcal) / キムチ炒飯(640kcal)" },
+  { cat: "主食", name: "カレーライス", portion: "定番ポーク/チキン 1皿", levels: "少:小盛 / 普:並盛(1皿) / 多:大盛/カツカレー", cal: 680, salt: 2.8, p: 16.0, f: 20.0, c: 105.0, memo: "【サブタイプあり】濃厚ビーフ(750kcal) / カツカレー(950kcal)" },
+  { cat: "主食", name: "寿司・にぎり/巻物", portion: "並・盛り合わせ 8〜10貫", levels: "少:5〜6貫 / 普:8〜10貫(並) / 多:12〜14貫", cal: 550, salt: 2.2, p: 24.0, f: 6.0, c: 98.0, memo: "【サブタイプあり】上特上/赤身中心/回転寿司/助六。酢飯糖質に留意" },
+  { cat: "主食", name: "すき焼き丼", portion: "並盛 1杯 (牛肉・豆腐・玉ねぎ)", levels: "少:小盛 / 普:並盛 / 多:大盛", cal: 750, salt: 2.8, p: 22.0, f: 22.0, c: 108.0, memo: "割り下による糖質・塩分を含む。卵でタンパク質強化" },
+  { cat: "主食", name: "チャーシュー丼", portion: "並盛 1杯 (煮豚・タレ)", levels: "少:ミニ丼 / 普:並盛 / 多:肉増し大盛", cal: 680, salt: 2.6, p: 24.0, f: 22.0, c: 92.0, memo: "豚バラ肉の動物性脂質。ラーメンセット時は半量推奨" },
+
+  // 🍲 汁物
+  { cat: "汁物", name: "味噌汁(豆腐/わかめ)", portion: "お椀1杯 汁半分飲み (約150ml)", levels: "少:具のみ / 普:汁半分 / 多:汁完飲(塩分倍)", cal: 40, salt: 0.6, p: 2.5, f: 1.2, c: 4.5, memo: "具だくさん＋汁半分で減塩(0.6g)。大豆イソフラボン含有" },
+  { cat: "汁物", name: "豚汁・けんちん汁", portion: "根菜・豚肉具だくさん お椀1杯", levels: "少:小椀 / 普:標準椀 / 多:大椀・おかず椀", cal: 120, salt: 1.4, p: 6.5, f: 5.5, c: 10.5, memo: "ゴボウ・大根・人参で食物繊維・カリウム豊富" },
+  { cat: "汁物", name: "野菜コンソメスープ", portion: "マグカップ1杯 (約150ml)", levels: "少:少量 / 普:1杯 / 多:大きめ", cal: 40, salt: 1.0, p: 1.5, f: 0.5, c: 7.0, memo: "玉ねぎ・キャベツのカリウムが塩分排泄を補助" },
+  { cat: "汁物", name: "中華・わかめスープ", portion: "中華スープ椀1杯 (約150ml)", levels: "少:少量 / 普:1杯 / 多:大きめ", cal: 35, salt: 1.1, p: 1.8, f: 1.0, c: 4.5, memo: "わかめの水溶性食物繊維（アルギン酸）が血圧を安定" },
+  { cat: "汁物", name: "ポタージュ濃縮汁", portion: "コーンポタージュ 1杯", levels: "少:少量 / 普:1杯 / 多:2杯", cal: 95, salt: 1.0, p: 2.2, f: 3.5, c: 13.5, memo: "生クリーム・バター由来の脂質を含む" },
+  { cat: "汁物", name: "ミネストローネ", portion: "トマト野菜煮込み 1杯", levels: "少:少量 / 普:1杯 / 多:具沢山大杯", cal: 70, salt: 1.1, p: 2.8, f: 1.8, c: 10.5, memo: "リコピン（強力抗酸化）・カリウム高含有" },
+
+  // 🥩 おかず
+  { cat: "おかず", name: "焼き魚・煮魚", portion: "切り身 1切 (約80〜100g)", levels: "少:小さめ切身 / 普:1切(約90g) / 多:大ぶり/2切", cal: 160, salt: 1.1, p: 19.5, f: 8.5, c: 0.8, memo: "鮭/サバ/ホッケ。オメガ3（EPA・DHA）が血管内皮を修復" },
+  { cat: "おかず", name: "刺身・生魚", portion: "盛り合わせ (約5〜6切・100g)", levels: "少:3切 / 普:1人前(5〜6切) / 多:舟盛り/多め", cal: 130, salt: 0.6, p: 22.0, f: 4.5, c: 0.2, memo: "【サブタイプあり】赤身(100kcal)/白身(90kcal)/青魚(150kcal)/トロ(180kcal)" },
+  { cat: "おかず", name: "鶏唐揚げ・チキン", portion: "標準サイズ 3個 (約90g)", levels: "少:1〜2個 / 普:3個 / 多:5個以上", cal: 280, salt: 1.0, p: 16.5, f: 18.0, c: 11.0, memo: "良質な動物性タンパク質。揚げ油の酸化に配慮" },
+  { cat: "おかず", name: "とんかつ・カツ類", portion: "ロースかつ 1枚 (約120g)", levels: "少:ハーフ(60g) / 普:1枚(120g) / 多:大判1枚(180g)", cal: 450, salt: 1.2, p: 21.0, f: 32.0, c: 16.0, memo: "【サブタイプあり】ヒレかつ(340kcal/脂質低め)" },
+  { cat: "おかず", name: "豚生姜焼き・野菜炒め", portion: "豚ロース3枚＋玉ねぎキャベツ", levels: "少:肉2枚 / 普:並盛1皿 / 多:肉大盛", cal: 260, salt: 1.2, p: 17.5, f: 16.0, c: 9.5, memo: "ビタミンB1豊富（糖質代謝促進・疲労回復）" },
+  { cat: "おかず", name: "ハンバーグ", portion: "デミグラス 1個 (約150g)", levels: "少:小(100g) / 普:標準(150g) / 多:大(250g)", cal: 380, salt: 1.6, p: 19.0, f: 24.0, c: 18.0, memo: "【サブタイプあり】チーズイン(460kcal)。脂質高め" },
+  { cat: "おかず", name: "牛ステーキ", portion: "赤身肉 1枚 (約180g)", levels: "少:120g / 普:200g(標準1枚) / 多:350g(大盛)", cal: 360, salt: 1.0, p: 35.0, f: 22.0, c: 1.0, memo: "【サブタイプあり】サーモン/リブロース(680kcal/高脂質)" },
+  { cat: "おかず", name: "牛焼肉・カルビ/ロース", portion: "ロース・赤身肉中心 1人前(100g)", levels: "少:ハーフ / 普:1人前(100g) / 多:肉増し(180g)", cal: 240, salt: 1.0, p: 20.0, f: 16.0, c: 3.0, memo: "【サブタイプあり】カルビ・脂身多め(380kcal)" },
+  { cat: "おかず", name: "ホルモン焼き・レバー炒め", portion: "ニラレバ/ホルモン 1皿", levels: "少:小鉢 / 普:1皿 / 多:大盛り", cal: 250, salt: 1.2, p: 18.0, f: 16.0, c: 6.5, memo: "【サブタイプあり】レバー(高鉄分・140kcal) / ホルモン(280kcal)" },
+  { cat: "おかず", name: "目玉焼き・卵料理", portion: "鶏卵 1個分 (約60g)", levels: "少:1個 / 普:1個 / 多:卵2個以上", cal: 95, salt: 0.3, p: 7.5, f: 6.8, c: 0.3, memo: "アミノ酸スコア100の完全栄養食品" },
+  { cat: "おかず", name: "納豆", portion: "1パック タレ半分使用 (約45g)", levels: "少:半パック / 普:1パック / 多:2パック", cal: 90, salt: 0.3, p: 7.4, f: 4.5, c: 5.4, memo: "タレ半分で減塩(0.3g)。ナットウキナーゼで血栓予防" },
+  { cat: "おかず", name: "豆腐・冷奴・厚揚げ", portion: "絹・木綿冷奴 半丁 (約150g)", levels: "少:一口サイズ / 普:半丁(150g) / 多:1丁", cal: 90, salt: 0.4, p: 8.0, f: 4.8, c: 3.0, memo: "植物性タンパク質・マグネシウム豊富" },
+  { cat: "おかず", name: "麻婆豆腐", portion: "家庭風 1人前 (約180g)", levels: "少:小鉢 / 普:1人前(180g) / 多:大皿盛", cal: 280, salt: 2.2, p: 14.0, f: 18.0, c: 12.0, memo: "【サブタイプあり】本格四川(340kcal) / 麻婆茄子(320kcal)" },
+  { cat: "おかず", name: "餃子・焼売", portion: "焼き餃子 1皿 (5〜6個・約120g)", levels: "少:3個 / 普:1皿(5〜6個) / 多:2皿/大皿", cal: 220, salt: 1.1, p: 8.5, f: 11.5, c: 20.0, memo: "【サブタイプあり】水餃子(200kcal) / 焼売・点心(200kcal)" },
+  { cat: "おかず", name: "生野菜サラダ", portion: "中皿1杯 ノンドレ/薄掛け", levels: "少:小鉢 / 普:中皿1杯 / 多:特大ボウル", cal: 35, salt: 0.4, p: 1.2, f: 0.3, c: 6.5, memo: "ベジファーストで食後血糖値スパイクを強力抑制" },
+  { cat: "おかず", name: "温野菜・ブロッコリー", portion: "小鉢1皿 (約80g)", levels: "少:一口 / 普:小鉢1皿 / 多:山盛り", cal: 40, salt: 0.3, p: 3.5, f: 0.5, c: 5.2, memo: "スルフォラファン含有。血管内皮の解毒酵素活性化" },
+  { cat: "おかず", name: "おひたし・和小鉢", portion: "ほうれん草/小松菜 1小鉢", levels: "少:一口 / 普:1小鉢 / 多:2小鉢", cal: 30, salt: 0.5, p: 2.0, f: 0.3, c: 4.5, memo: "カリウム・葉酸の宝庫。ナトリウム排泄を促進" },
+  { cat: "おかず", name: "きんぴら・ひじき煮", portion: "小鉢1皿 (約50g)", levels: "少:一口 / 普:1小鉢 / 多:大盛り", cal: 65, salt: 0.6, p: 1.5, f: 1.8, c: 9.8, memo: "食物繊維（不溶性・水溶性）バランス良好" },
+  { cat: "おかず", name: "ポテト・マカロニサラダ", portion: "小鉢1盛 (約70g)", levels: "少:一口 / 普:1盛 / 多:大盛り", cal: 140, salt: 0.6, p: 2.0, f: 8.5, c: 13.5, memo: "マヨネーズ由来の脂質を含むため主食扱いに近い" },
+  { cat: "おかず", name: "漬物・キムチ", portion: "小皿1盛 (約30g)", levels: "少:一口 / 普:1盛 / 多:多め", cal: 20, salt: 1.0, p: 1.0, f: 0.2, c: 3.5, memo: "植物性乳酸菌（プロバイオティクス）。塩分注意" },
+  { cat: "おかず", name: "惣菜揚げ物(コロッケ等)", portion: "コロッケ 1個 (約80g)", levels: "少:ハーフ / 普:1個 / 多:2個以上", cal: 200, salt: 0.8, p: 3.5, f: 11.0, c: 21.0, memo: "糖質＋脂質の組み合わせ。夕食時は控えめ推奨" },
+  { cat: "おかず", name: "その他・残り物惣菜", portion: "家庭の小鉢 1品", levels: "少:一口 / 普:1品 / 多:大盛り", cal: 150, salt: 0.8, p: 6.0, f: 7.0, c: 14.0, memo: "一般的な家庭料理の平均マクロ栄養素を適用" },
+
+  // ☕ 飲料
+  { cat: "飲料", name: "コーヒー", portion: "ブラック 1杯 (約150ml)", levels: "少:半杯 / 普:1杯 / 多:大マグ", cal: 5, salt: 0.0, p: 0.3, f: 0.0, c: 0.9, memo: "【サブタイプあり】豆乳入り(50kcal) / アーモンドミルク(25kcal) / ミルク(45kcal)" },
+  { cat: "飲料", name: "ノンアルソーダ", portion: "グラス/缶 1本 (約350ml)", levels: "少:グラス半 / 普:1本 / 多:2本", cal: 15, salt: 0.0, p: 0.0, f: 0.0, c: 3.5, memo: "休肝日の代替飲料として交感神経の興奮を抑制" },
+  { cat: "飲料", name: "ヤクルト", portion: "1本 (約65ml)", levels: "少:1本 / 普:1本 / 多:2本", cal: 50, salt: 0.0, p: 0.8, f: 0.1, c: 11.5, memo: "乳酸菌シロタ株。腸内環境・自律神経の調整" },
+  { cat: "飲料", name: "野菜ジュース", portion: "紙パック 1本 (約200ml)", levels: "少:半杯 / 普:1本(200ml) / 多:2本", cal: 70, salt: 0.1, p: 1.5, f: 0.2, c: 15.5, memo: "カリウム高含有(約400〜600mg)。塩分排出に直結" },
+  { cat: "飲料", name: "オロナミンC", portion: "1瓶 (約120ml)", levels: "少:1瓶 / 普:1瓶 / 多:2瓶", cal: 79, salt: 0.0, p: 0.0, f: 0.0, c: 19.0, memo: "ビタミンB2・B6・C含有。糖質中心" },
+
+  // 🍪 間食
+  { cat: "間食", name: "チョコレート", portion: "個包装 2〜3枚 (約25g)", levels: "少:一口(1枚) / 普:2〜3枚 / 多:板チョコ半枚", cal: 140, salt: 0.0, p: 1.8, f: 9.0, c: 13.0, memo: "カカオポリフェノール（血管拡張・降圧作用）" },
+  { cat: "間食", name: "スナック菓子", portion: "小袋 1袋 (約30g)", levels: "少:一口 / 普:小袋(30g) / 多:大袋半量", cal: 165, salt: 0.4, p: 1.5, f: 9.8, c: 17.5, memo: "油分と塩分が重なるため夕食の減塩で相殺推奨" },
+  { cat: "間食", name: "和菓子・せんべい", portion: "大福1個 / せんべい2枚", levels: "少:半個 / 普:1個(2枚) / 多:2個以上", cal: 130, salt: 0.3, p: 2.2, f: 0.5, c: 29.0, memo: "洋菓子に比べ脂質が極めて低い（脂質異常症に有利）" },
+  { cat: "間食", name: "ショートケーキ", portion: "カットケーキ 1個", levels: "少:小さめ / 普:1個 / 多:大ぶり", cal: 340, salt: 0.2, p: 4.5, f: 22.0, c: 31.0, memo: "生クリームの飽和脂肪酸。夕食は赤身魚や和食推奨" },
+  { cat: "間食", name: "アイスクリーム", portion: "カップアイス 1個 (約100ml)", levels: "少:ミニ / 普:1個 / 多:大型カップ", cal: 180, salt: 0.1, p: 3.5, f: 9.0, c: 21.0, memo: "ラクトアイスより乳脂肪分高めの純アイスが良質" },
+
+  // 🍜 夜食
+  { cat: "夜食", name: "カップラーメン(麺)", portion: "ミニ〜普通サイズ つゆ残し", levels: "少:ミニ / 普:普通カップ / 多:大盛", cal: 350, salt: 2.5, p: 7.5, f: 14.0, c: 48.0, memo: "就寝直前は消化管負担。つゆ残し必須" },
+  { cat: "夜食", name: "お茶漬け・雑炊", portion: "お茶碗1杯 (約150g)", levels: "少:軽め / 普:1杯 / 多:丼盛り", cal: 180, salt: 1.2, p: 4.0, f: 0.5, c: 39.0, memo: "サラサラ食べられるが咀嚼を意識して満腹中枢刺激" },
+  { cat: "夜食", name: "深夜スナック・おつまみ", portion: "ミックスナッツ/チーズ等", levels: "少:小袋 / 普:1皿 / 多:多め", cal: 160, salt: 0.6, p: 5.5, f: 12.0, c: 7.5, memo: "無塩ナッツなら良質な不飽和脂肪酸を補給可能" }
+];
+
+let globalRecords = {};
+let globalProfile = {};
+let globalMeds = [];
+let globalSettings = {};
+
+let chartInstances = {};
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadDataFromLocalStorage();
+  loadSavedGeminiApiKey();
+  renderDictTable();
+  refreshAnalysis();
+  generateDoctorReport();
+});
+
+function loadSavedGeminiApiKey() {
+  const k = localStorage.getItem(MASTER_KEY_GEMINI_KEY);
+  if (k) {
+    const el = document.getElementById('geminiApiKeyInput');
+    if (el) el.value = k;
+  }
+}
+
+function saveGeminiApiKey() {
+  const el = document.getElementById('geminiApiKeyInput');
+  if (el) {
+    const key = el.value.trim();
+    if (key) localStorage.setItem(MASTER_KEY_GEMINI_KEY, key);
+    else localStorage.removeItem(MASTER_KEY_GEMINI_KEY);
+  }
+}
+
+function loadDataFromLocalStorage() {
+  const recStr = localStorage.getItem(MASTER_KEY_RECORDS);
+  const profStr = localStorage.getItem(MASTER_KEY_PROFILE);
+  const medStr = localStorage.getItem(MASTER_KEY_MEDS);
+  const setStr = localStorage.getItem(MASTER_KEY_SETTINGS);
+
+  if (recStr) {
+    try { globalRecords = JSON.parse(recStr); } catch (e) { globalRecords = {}; }
+  }
+  if (profStr) {
+    try { globalProfile = JSON.parse(profStr); } catch (e) { globalProfile = {}; }
+  }
+  if (medStr) {
+    try { globalMeds = JSON.parse(medStr); } catch (e) { globalMeds = []; }
+  }
+  if (setStr) {
+    try { globalSettings = JSON.parse(setStr); } catch (e) { globalSettings = {}; }
+  }
+
+  const badge = document.getElementById('syncStatusBadge');
+  const text = document.getElementById('syncStatusText');
+  const recCount = Object.keys(globalRecords).length;
+
+  if (recCount > 0) {
+    text.textContent = `ローカル同期完了 (${recCount}日分の記録)`;
+    badge.style.color = "var(--accent-green)";
+  } else {
+    text.textContent = `記録未検出 (JSON読込可能)`;
+    badge.style.color = "var(--accent-amber)";
+  }
+}
+
+function importViewerJSON(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.records) globalRecords = data.records;
+      if (data.profile) globalProfile = data.profile;
+      if (data.meds) globalMeds = data.meds;
+      if (data.settings) globalSettings = data.settings;
+
+      const badge = document.getElementById('syncStatusBadge');
+      const text = document.getElementById('syncStatusText');
+      const recCount = Object.keys(globalRecords).length;
+      text.textContent = `JSON読込完了 (${recCount}日分)`;
+      badge.style.color = "var(--accent-blue)";
+
+      refreshAnalysis();
+      generateDoctorReport();
+      alert(`✅ バックアップファイルから ${recCount} 日分の記録を正常に読み込みました！`);
+    } catch (err) {
+      alert("JSONファイルの解析に失敗しました。正しいバックアップファイルを選択してください。");
+    } finally {
+      event.target.value = '';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function switchViewerTab(tabId) {
+  document.querySelectorAll('.nav-tabs .tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => {
+    c.classList.toggle('active', c.id === tabId);
+  });
+
+  if (tabId === 'analysisTab') {
+    setTimeout(refreshAnalysis, 50);
+  } else if (tabId === 'reportTab') {
+    setTimeout(generateDoctorReport, 50);
+  }
+}
+
+// =========================================================
+// TAB 1: 食品辞書 レンダリング
+// =========================================================
+function renderDictTable() {
+  const catFilter = document.getElementById('dictCatFilter').value;
+  const search = document.getElementById('dictSearchInput').value.trim().toLowerCase();
+  const tbody = document.getElementById('dictTableBody');
+  tbody.innerHTML = '';
+
+  const filtered = COMPREHENSIVE_FOOD_DICT.filter(item => {
+    if (catFilter !== 'ALL' && item.cat !== catFilter) return false;
+    if (search && !item.name.toLowerCase().includes(search) && !item.memo.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  document.getElementById('dictItemCount').textContent = `${filtered.length}品目 表示中`;
+
+  filtered.forEach(it => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="cat-badge cat-${it.cat}">${it.cat}</span></td>
+      <td style="font-weight:bold; color:#ffffff;">${escapeHtml(it.name)}</td>
+      <td><span class="portion-tag">${escapeHtml(it.portion)}</span></td>
+      <td style="color:var(--text-muted); font-size:0.72rem;">${escapeHtml(it.levels)}</td>
+      <td style="text-align:right; font-weight:bold; color:var(--accent-amber);">${it.cal}</td>
+      <td style="text-align:right; font-weight:bold; color:#ffffff;">${it.salt.toFixed(1)}g</td>
+      <td style="text-align:right; font-weight:bold; color:#60a5fa;">${it.p.toFixed(1)}g</td>
+      <td style="text-align:right; font-weight:bold; color:#fb7185;">${it.f.toFixed(1)}g</td>
+      <td style="text-align:right; font-weight:bold; color:#fbbf24;">${it.c.toFixed(1)}g</td>
+      <td>
+        <div style="font-size:0.7rem; color:var(--text-muted); line-height:1.35;">${escapeHtml(it.memo)}</div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+}
+
+// =========================================================
+// TAB 2: 多角臨床ダッシュボード ロジック
+// =========================================================
+function getFilteredRecords(period) {
+  const allDates = Object.keys(globalRecords).sort();
+  if (allDates.length === 0) return [];
+
+  let days = 14;
+  if (period === '30d') days = 30;
+  else if (period === '60d') days = 60;
+  else if (period === '90d') days = 90;
+  else if (period === 'ALL') days = allDates.length;
+
+  const targetDates = allDates.slice(-days);
+  return targetDates.map(d => ({ date: d, ...globalRecords[d] }));
+}
+
+function calculatePFCForDay(rec) {
+  let totalCal = 0;
+  let totalSalt = 0;
+  let totalP = 0;
+  let totalF = 0;
+  let totalC = 0;
+
+  const allItems = [
+    ...(rec.morning?.items || []),
+    ...(rec.lunch?.items || []),
+    ...(rec.dinner?.items || []),
+    ...(rec.snack?.items || []),
+    ...(rec.latenight?.items || [])
+  ];
+
+  allItems.forEach(item => {
+    const dict = COMPREHENSIVE_FOOD_DICT.find(x => x.name === item.name) || {
+      cal: item.cal || 150, salt: item.salt || 0.8, p: 5.0, f: 5.0, c: 20.0
+    };
+
+    let mult = 1.0;
+    if (item.amount === '少ない') mult = 0.6;
+    else if (item.amount === '多い') mult = 1.6;
+
+    const effCal = (item.cal !== undefined ? item.cal : dict.cal) * mult;
+    let effSalt = (item.salt !== undefined ? item.salt : dict.salt) * mult;
+
+    if (item.name.includes('味噌汁') || item.name.includes('納豆')) {
+      effSalt *= 0.5;
+    }
+
+    totalCal += effCal;
+    totalSalt += effSalt;
+    totalP += (dict.p * mult);
+    totalF += (dict.f * mult);
+    totalC += (dict.c * mult);
+  });
+
+  return {
+    cal: Math.round(totalCal),
+    salt: Number(totalSalt.toFixed(1)),
+    p: Number(totalP.toFixed(1)),
+    f: Number(totalF.toFixed(1)),
+    c: Number(totalC.toFixed(1))
+  };
+}
+
+function refreshAnalysis() {
+  const period = document.getElementById('analysisPeriodSelect').value;
+  const list = getFilteredRecords(period);
+
+  const rangeEl = document.getElementById('analysisDataRangeText');
+  if (list.length === 0) {
+    rangeEl.textContent = "対象データがありません（メインアプリで記録を入力してください）";
+    return;
+  }
+  rangeEl.textContent = `集計期間: ${list[0].date} 〜 ${list[list.length - 1].date} (${list.length}日分)`;
+
+  // 統計集計
+  let sumSysM = 0, sumDiaM = 0, countM = 0;
+  let sumSysN = 0, sumDiaN = 0, countN = 0;
+  let sumPP = 0, countPP = 0;
+  let sumSalt = 0, countSalt = 0;
+  let sumP = 0, sumF = 0, sumC = 0, sumNutCal = 0;
+
+  const dates = [];
+  const mSysArr = [], mDiaArr = [];
+  const nSysArr = [], nDiaArr = [];
+  const meDiffArr = [];
+  const weights = [];
+  const steps = [];
+  const sleepHours = [];
+  const pList = [], fList = [], cList = [];
+
+  list.forEach(rec => {
+    dates.push(rec.date.slice(5));
+
+    // 朝血圧
+    const mSys = rec.morning?.bpSys || null;
+    const mDia = rec.morning?.bpDia || null;
+    mSysArr.push(mSys);
+    mDiaArr.push(mDia);
+    if (mSys && mDia) {
+      sumSysM += mSys; sumDiaM += mDia; countM++;
+      const pp = mSys - mDia;
+      sumPP += pp; countPP++;
+    }
+
+    // 就寝前血圧
+    const nSys = rec.night?.bpSys || null;
+    const nDia = rec.night?.bpDia || null;
+    nSysArr.push(nSys);
+    nDiaArr.push(nDia);
+    if (nSys && nDia) {
+      sumSysN += nSys; sumDiaN += nDia; countN++;
+    }
+
+    // モーニングサージ (朝 - 夜)
+    if (mSys && nSys) {
+      meDiffArr.push(mSys - nSys);
+    } else {
+      meDiffArr.push(null);
+    }
+
+    // 体重・歩数・睡眠
+    weights.push(rec.weight || null);
+    steps.push(rec.steps || 0);
+    sleepHours.push(rec.morning?.sleepHours ? parseFloat(rec.morning.sleepHours) : null);
+
+    // PFC
+    const pfc = calculatePFCForDay(rec);
+    sumSalt += pfc.salt; countSalt++;
+    sumP += pfc.p; sumF += pfc.f; sumC += pfc.c;
+    sumNutCal += pfc.cal;
+    pList.push(pfc.p); fList.push(pfc.f); cList.push(pfc.c);
+  });
+
+  // ハイライト数値の反映
+  const avgMSys = countM > 0 ? Math.round(sumSysM / countM) : '--';
+  const avgMDia = countM > 0 ? Math.round(sumDiaM / countM) : '--';
+  document.getElementById('stat_m_bp').innerHTML = `${avgMSys} / ${avgMDia} <span class="stat-unit">mmHg</span>`;
+  document.getElementById('stat_m_bp_sub').textContent = avgMSys < 125 ? "至適域クリア◎ (目標達成)" : "やや高値 (減塩・保温を推奨)";
+
+  const avgNSys = countN > 0 ? Math.round(sumSysN / countN) : '--';
+  const avgNDia = countN > 0 ? Math.round(sumDiaN / countN) : '--';
+  document.getElementById('stat_n_bp').innerHTML = `${avgNSys} / ${avgNDia} <span class="stat-unit">mmHg</span>`;
+  document.getElementById('stat_n_bp_sub').textContent = countN === 0 ? "※夜血圧の入力を開始すると表示" : (avgNSys < 125 ? "夜間血圧良好◎" : "夜間高血圧に注意");
+
+  const avgPP = countPP > 0 ? Math.round(sumPP / countPP) : '--';
+  document.getElementById('stat_pp').innerHTML = `${avgPP} <span class="stat-unit">mmHg</span>`;
+  document.getElementById('stat_pp_sub').textContent = avgPP < 65 ? "血管しなやかさ良好◎" : "動脈硬化警戒域 (有酸素運動推奨)";
+
+  const avgSalt = countSalt > 0 ? (sumSalt / countSalt).toFixed(1) : '--';
+  document.getElementById('stat_salt').innerHTML = `${avgSalt} <span class="stat-unit">g/日</span>`;
+  document.getElementById('stat_salt_sub').textContent = avgSalt <= 6.0 ? "学会目標(6.0g)クリア◎" : "野菜・豆乳でカリウム排泄を";
+
+  // チャート描画 1: 朝晩血圧 ＆ モーニングサージ
+  renderViewerBpChart(dates, mSysArr, mDiaArr, nSysArr, nDiaArr);
+
+  // チャート描画 2: PFC比率円グラフ ＆ 積み上げ
+  renderViewerPfcCharts(dates, sumP, sumF, sumC, pList, fList, cList);
+
+  // チャート描画 3: 体重＆歩数
+  renderViewerWeightStepsChart(dates, weights, steps);
+
+  // チャート描画 4: 睡眠vs翌朝血圧
+  renderViewerSleepBpChart(dates, sleepHours, mSysArr);
+}
+
+function renderViewerBpChart(labels, mSys, mDia, nSys, nDia) {
+  const ctx = document.getElementById('viewerBpChart').getContext('2d');
+  if (chartInstances.bp) chartInstances.bp.destroy();
+
+  chartInstances.bp = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: '朝 最高血圧', data: mSys, borderColor: '#fb7185', borderWidth: 2.5, tension: 0.2, pointRadius: 3, pointBackgroundColor: '#fb7185' },
+        { label: '朝 最低血圧', data: mDia, borderColor: 'rgba(251, 113, 133, 0.5)', borderWidth: 1.5, borderDash: [2, 2], pointRadius: 2 },
+        { label: '夜 最高血圧', data: nSys, borderColor: '#c084fc', borderWidth: 2.5, tension: 0.2, pointRadius: 3, pointBackgroundColor: '#c084fc' },
+        { label: '夜 最低血圧', data: nDia, borderColor: 'rgba(192, 132, 252, 0.5)', borderWidth: 1.5, borderDash: [2, 2], pointRadius: 2 },
+        { label: '家庭至適基準(125)', data: Array(labels.length).fill(125), borderColor: '#34d399', borderWidth: 1.5, borderDash: [4, 4], pointRadius: 0 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b9bb4', font: { size: 10 } } } },
+      scales: {
+        x: { ticks: { color: '#64748b', maxTicksLimit: 10 }, grid: { color: '#1a243a' } },
+        y: { min: 60, max: 170, ticks: { color: '#64748b' }, grid: { color: '#1a243a' } }
+      }
+    }
+  });
+}
+
+function renderViewerPfcCharts(labels, totalP, totalF, totalC, pArr, fArr, cArr) {
+  const pCal = totalP * 4;
+  const fCal = totalF * 9;
+  const cCal = totalC * 4;
+  const sumCal = (pCal + fCal + cCal) || 1;
+
+  const pRate = Math.round((pCal / sumCal) * 100);
+  const fRate = Math.round((fCal / sumCal) * 100);
+  const cRate = 100 - (pRate + fRate);
+
+  const detailEl = document.getElementById('pfcTextDetail');
+  detailEl.innerHTML = `
+    <div style="margin-bottom:4px; font-weight:bold; color:#ffffff;">【期間平均 PFCエネルギー比率】</div>
+    <div style="color:#60a5fa;">● タンパク質 (P): <b>${pRate}%</b> (平均 ${(totalP/labels.length).toFixed(1)}g /日) <small style="color:var(--text-muted);">理想13-20%</small></div>
+    <div style="color:#fb7185;">● 脂質 (F): <b>${fRate}%</b> (平均 ${(totalF/labels.length).toFixed(1)}g /日) <small style="color:var(--text-muted);">理想20-30%</small></div>
+    <div style="color:#fbbf24;">● 炭水化物 (C): <b>${cRate}%</b> (平均 ${(totalC/labels.length).toFixed(1)}g /日) <small style="color:var(--text-muted);">理想50-65%</small></div>
+    <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
+      ${fRate > 30 ? '⚠️ 脂質比率がやや高めです。揚げ物・脂身肉を魚や豆類に置換すると理想域に近づきます。' : '✅ 脂質・タンパク質バランスは適正域をキープできています！'}
+    </div>
+  `;
+
+  // 円グラフ
+  const ctxPie = document.getElementById('viewerPfcPieChart').getContext('2d');
+  if (chartInstances.pfcPie) chartInstances.pfcPie.destroy();
+
+  chartInstances.pfcPie = new Chart(ctxPie, {
+    type: 'doughnut',
+    data: {
+      labels: ['P (蛋白)', 'F (脂質)', 'C (糖質)'],
+      datasets: [{
+        data: [pCal, fCal, cCal],
+        backgroundColor: ['#60a5fa', '#fb7185', '#fbbf24'],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      cutout: '65%'
+    }
+  });
+
+  // 積み上げ推移
+  const ctxStack = document.getElementById('viewerPfcStackChart').getContext('2d');
+  if (chartInstances.pfcStack) chartInstances.pfcStack.destroy();
+
+  chartInstances.pfcStack = new Chart(ctxStack, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'P(g)', data: pArr, backgroundColor: '#60a5fa' },
+        { label: 'F(g)', data: fArr, backgroundColor: '#fb7185' },
+        { label: 'C(g)', data: cArr, backgroundColor: '#fbbf24' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b9bb4', font: { size: 9 } } } },
+      scales: {
+        x: { stacked: true, ticks: { color: '#64748b', maxTicksLimit: 10 }, grid: { display: false } },
+        y: { stacked: true, ticks: { color: '#64748b' }, grid: { color: '#1a243a' } }
+      }
+    }
+  });
+}
+
+function renderViewerWeightStepsChart(labels, weights, steps) {
+  const ctx = document.getElementById('viewerWeightStepsChart').getContext('2d');
+  if (chartInstances.weight) chartInstances.weight.destroy();
+
+  chartInstances.weight = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: '体重 (kg)', type: 'line', data: weights, borderColor: '#38bdf8', borderWidth: 2.5, tension: 0.3, pointRadius: 3, yAxisID: 'yW' },
+        { label: '歩数 (歩)', type: 'bar', data: steps, backgroundColor: 'rgba(52, 211, 153, 0.25)', borderColor: '#34d399', borderWidth: 1, yAxisID: 'yS' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b9bb4', font: { size: 10 } } } },
+      scales: {
+        x: { ticks: { color: '#64748b', maxTicksLimit: 10 }, grid: { color: '#1a243a' } },
+        yW: { type: 'linear', position: 'left', ticks: { color: '#38bdf8' }, grid: { color: '#1a243a' } },
+        yS: { type: 'linear', position: 'right', ticks: { color: '#34d399' }, grid: { drawOnChartArea: false } }
+      }
+    }
+  });
+}
+
+function renderViewerSleepBpChart(labels, sleepH, mSys) {
+  const ctx = document.getElementById('viewerSleepBpChart').getContext('2d');
+  if (chartInstances.sleep) chartInstances.sleep.destroy();
+
+  chartInstances.sleep = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: '翌朝最高血圧 (mmHg)', data: mSys, borderColor: '#fb7185', borderWidth: 2, tension: 0.2, pointRadius: 3, yAxisID: 'yBp' },
+        { label: '睡眠時間 (h)', type: 'bar', data: sleepH, backgroundColor: 'rgba(192, 132, 252, 0.3)', borderColor: '#c084fc', borderWidth: 1, yAxisID: 'ySlp' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8b9bb4', font: { size: 10 } } } },
+      scales: {
+        x: { ticks: { color: '#64748b', maxTicksLimit: 10 }, grid: { color: '#1a243a' } },
+        yBp: { type: 'linear', position: 'left', min: 90, max: 170, ticks: { color: '#fb7185' }, grid: { color: '#1a243a' } },
+        ySlp: { type: 'linear', position: 'right', min: 0, max: 12, ticks: { color: '#c084fc' }, grid: { drawOnChartArea: false } }
+      }
+    }
+  });
+}
+
+// =========================================================
+// TAB 2: AI カンファレンス実行 (Gemini API 厳格固定連携)
+// =========================================================
+async function runAiConference() {
+  const outputEl = document.getElementById('conferenceOutputArea');
+  const btn = document.getElementById('btnRunAi');
+  const apiKey = (document.getElementById('geminiApiKeyInput')?.value || '').trim();
+
+  btn.disabled = true;
+  btn.textContent = "⏳ 臨床データ解析中...";
+  outputEl.innerHTML = "循環器内科専門医および管理栄養士が最新のバイタル・PFC栄養・睡眠相関データをカンファレンス中です...";
+
+  const period = document.getElementById('analysisPeriodSelect').value;
+  const list = getFilteredRecords(period);
+
+  if (list.length === 0) {
+    outputEl.textContent = "分析対象の記録データがありません。";
+    btn.disabled = false;
+    btn.textContent = "✨ カンファレンスを実行・最新分析";
+    return;
+  }
+
+  // 臨床サマリーデータ作成
+  let sumSysM = 0, sumDiaM = 0, countM = 0;
+  let sumSysN = 0, sumDiaN = 0, countN = 0;
+  let sumSalt = 0, sumSteps = 0, sumSleep = 0;
+  let sumP = 0, sumF = 0, sumC = 0;
+
+  list.forEach(r => {
+    if (r.morning?.bpSys) { sumSysM += r.morning.bpSys; sumDiaM += r.morning.bpDia; countM++; }
+    if (r.night?.bpSys) { sumSysN += r.night.bpSys; sumDiaN += r.night.bpDia; countN++; }
+    if (r.steps) sumSteps += r.steps;
+    if (r.morning?.sleepHours) sumSleep += parseFloat(r.morning.sleepHours);
+    const pfc = calculatePFCForDay(r);
+    sumSalt += pfc.salt; sumP += pfc.p; sumF += pfc.f; sumC += pfc.c;
+  });
+
+  const avgSysM = countM > 0 ? Math.round(sumSysM / countM) : 0;
+  const avgDiaM = countM > 0 ? Math.round(sumDiaM / countM) : 0;
+  const avgSysN = countN > 0 ? Math.round(sumSysN / countN) : 0;
+  const avgDiaN = countN > 0 ? Math.round(sumDiaN / countN) : 0;
+  const avgSalt = Number((sumSalt / list.length).toFixed(1));
+  const avgSteps = Math.round(sumSteps / list.length);
+  const avgSleep = Number((sumSleep / list.length).toFixed(1));
+
+  const pCal = sumP * 4, fCal = sumF * 9, cCal = sumC * 4;
+  const totalCal = (pCal + fCal + cCal) || 1;
+  const pRate = Math.round((pCal / totalCal) * 100);
+  const fRate = Math.round((fCal / totalCal) * 100);
+  const cRate = 100 - (pRate + fRate);
+
+  const clinicalSummaryText = `
+【患者基本情報】
+年齢/性別: ${globalProfile.age || '50代'} ${globalProfile.gender || '男性'}, 身長: ${globalProfile.height || 172}cm
+重点疾患: ${(globalProfile.cares || ['高血圧', '脂質異常症']).join(', ')}
+
+【直近臨床バイタル統計 (${list.length}日間)】
+・朝血圧平均: ${avgSysM}/${avgDiaM} mmHg (測定 ${countM}回)
+・就寝前血圧平均: ${avgSysN}/${avgDiaN} mmHg (測定 ${countN}回)
+・脈圧 (朝): ${avgSysM - avgDiaM} mmHg
+・推定平均食塩摂取量: ${avgSalt} g/日 (日本高血圧学会基準: 6.0g未満)
+・PFCエネルギー比率: タンパク質 ${pRate}% / 脂質 ${fRate}% / 炭水化物 ${cRate}%
+・平均睡眠時間: ${avgSleep} 時間
+・平均歩数: ${avgSteps} 歩/日
+  `.trim();
+
+  // APIキーが存在する場合は gemini-3.5-flash-lite へリクエスト
+  if (apiKey) {
+    try {
+      const response = await callGeminiApiWithFallback(apiKey, clinicalSummaryText);
+      outputEl.innerHTML = formatAiResponse(response);
+    } catch (err) {
+      console.warn("Gemini API error, falling back to rule-based:", err);
+      outputEl.innerHTML = generateRuleBasedClinicalAdvice(avgSysM, avgDiaM, avgSysN, avgDiaN, avgSalt, pRate, fRate, cRate, avgSleep, avgSteps) +
+        `<div style="font-size:0.7rem; color:var(--accent-amber); margin-top:8px;">※APIエラーのため高精度ルールベース診断に切り替えました (${err.message})</div>`;
+    }
+  } else {
+    // APIキーがない場合は精緻なルールベース臨床判定を即座に表示
+    outputEl.innerHTML = generateRuleBasedClinicalAdvice(avgSysM, avgDiaM, avgSysN, avgDiaN, avgSalt, pRate, fRate, cRate, avgSleep, avgSteps);
+  }
+
+  btn.disabled = false;
+  btn.textContent = "✨ カンファレンスを実行・最新分析";
+}
+
+// 厳格指定2モデル（gemini-3.5-flash-lite ➔ gemini-flash-lite-latest）によるフォールバックAPIコール
+async function callGeminiApiWithFallback(apiKey, summaryData) {
+  const prompt = `
+あなたは循環器内科専門医「Dr.ケン」と臨床病態管理栄養士「アヤ」です。
+以下の患者バイタルおよび生活習慣データを分析し、専門医と栄養士の2つの視点から、具体的で実用的な臨床カルテと栄養指導を日本語で記述してください。
+
+${summaryData}
+
+【出力要件】
+1. 🩺 【Dr.ケン (循環器内科) の臨床所見】:
+   - 朝と就寝前の血圧差（モーニングサージ有無）
+   - 脈圧による動脈硬化リスク
+   - 睡眠時間と血圧変動の相関
+   - 医師としての総合コメント
+2. 🥗 【管理栄養士 アヤ の栄養・食事処方】:
+   - PFCバランス（特に脂質比率とタンパク質充足度）の評価
+   - 推定食塩摂取量（目標6.0g）に対する減塩・カリウム相殺アドバイス
+   - 次週からすぐに実行できる具体的食材・メニュー提案
+  `.trim();
+
+  const models = ['gemini-3.5-flash-lite', 'gemini-flash-lite-latest'];
+  let lastError = null;
+
+  for (const model of models) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.2, maxOutputTokens: 1200 }
+      };
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        throw new Error(`Model ${model} returned HTTP ${res.status}`);
+      }
+
+      const resData = await res.json();
+      const text = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) return text;
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  throw lastError || new Error("All Gemini models failed");
+}
+
+function formatAiResponse(rawText) {
+  const formatted = rawText
+    .replace(/###?\s*(.+)/g, '<b style="color:var(--accent-blue); font-size:0.9rem;">$1</b>')
+    .replace(/\*\*(.+?)\*\*/g, '<b style="color:#ffffff;">$1</b>')
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\n/g, '<br>');
+  return `<div style="line-height:1.6;">${formatted}</div>`;
+}
+
+function generateRuleBasedClinicalAdvice(sysM, diaM, sysN, diaN, salt, pRate, fRate, cRate, sleep, steps) {
+  const meDiff = (sysM && sysN) ? (sysM - sysN) : null;
+  const pp = (sysM && diaM) ? (sysM - diaM) : null;
+
+  let docHtml = `<div class="conf-doc"><b style="color:var(--accent-blue); font-size:0.88rem;">🩺 Dr.ケン (循環器内科) の臨床所見:</b><br>`;
+  if (sysM < 125 && diaM < 75) {
+    docHtml += `期間中の朝血圧平均は <b>${sysM}/${diaM} mmHg</b> と、日本高血圧学会の家庭血圧至適基準（125/75未満）を完全にクリアしています。脳心血管病リスクは極めて低くコントロールされています。`;
+  } else if (sysM <= 135) {
+    docHtml += `朝血圧平均は <b>${sysM}/${diaM} mmHg</b>（正常高値域）。診察室血圧より家庭血圧が優先されます。起床直後の冷え込み防止と水分補給を継続しましょう。`;
+  } else {
+    docHtml += `朝血圧平均は <b>${sysM}/${diaM} mmHg</b> とやや高値です。夜間高血圧や起床時の交感神経緊張（モーニングサージ）への警戒が必要です。`;
+  }
+
+  if (meDiff !== null) {
+    if (meDiff >= 20) {
+      docHtml += `<br>⚠️ <b>モーニングサージ兆候:</b> 朝の血圧が夜より ${meDiff}mmHg 高く乖離しています。起床時の温かい水分補給と、急な立ち上がりを避ける動作を意識してください。`;
+    } else {
+      docHtml += `<br>✅ <b>朝夜差 (ME差):</b> 朝夜の血圧差は ${meDiff}mmHg と安定しており、夜間血圧の急上昇リスクは低く保たれています。`;
+    }
+  }
+
+  if (pp !== null) {
+    docHtml += `<br>・<b>脈圧:</b> ${pp} mmHg (基準65未満)。${pp < 65 ? '大動脈の進展性・弾性はしなやかに保たれています。' : 'やや脈圧が開いています。ウォーキングによる血管内皮刺激が有効です。'}</div>`;
+  } else {
+    docHtml += `</div>`;
+  }
+
+  let nutHtml = `<div class="conf-nut"><b style="color:var(--accent-green); font-size:0.88rem;">🥗 管理栄養士 アヤ の栄養・食事処方:</b><br>`;
+  nutHtml += `推定平均塩分は <b>${salt} g/日</b> です（目標6.0g未満）。`;
+  if (salt <= 6.5) {
+    nutHtml += `「つゆ残し」や「減塩味噌汁」の習慣が定着しており、非常に素晴らしい食塩コントロールです！<br>`;
+  } else {
+    nutHtml += `目標をやや超過しています。外食時のラーメンや丼もののつゆを残し、「野菜ジュース」や「豆乳」を1品足してカリウムによるナトリウム排泄を促しましょう。<br>`;
+  }
+
+  nutHtml += `・<b>PFCバランス評価:</b> 蛋白 ${pRate}% / 脂質 ${fRate}% / 炭水化物 ${cRate}%。<br>`;
+  if (fRate > 30) {
+    nutHtml += `脂質比率がやや高めです。お肉（カルビ・カツ等）の頻度を週2回、焼き魚（サバ・鮭）や刺身などの「オメガ3魚料理」や豆腐料理に置き換えることで、脂質異常症を力強く予防できます。</div>`;
+  } else {
+    nutHtml += `理想的なマクロ栄養素比率を達成しています！この調子で良質なタンパク質と野菜小鉢を維持しましょう。</div>`;
+  }
+
+  return docHtml + nutHtml;
+}
+
+// =========================================================
+// TAB 3: 医師提出用 A4クリニック・レポート 生成ロジック
+// =========================================================
+function generateDoctorReport() {
+  const period = document.getElementById('reportPeriodSelect').value;
+  const list = getFilteredRecords(period);
+
+  const today = new Date();
+  document.getElementById('repIssueDate').textContent = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+
+  if (list.length === 0) {
+    document.getElementById('repPeriodRange').textContent = "データなし";
+    document.getElementById('repDailyTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px;">記録データがありません。</td></tr>';
+    return;
+  }
+
+  document.getElementById('repPeriodRange').textContent = `${list[0].date} 〜 ${list[list.length - 1].date} (${list.length}日間)`;
+
+  // プロファイル
+  document.getElementById('repAgeGender').textContent = `${globalProfile.age || '50代'} ${globalProfile.gender || '男性'}`;
+  const h = globalProfile.height || 172;
+  const lastWeight = list[list.length - 1].weight || 68.0;
+  document.getElementById('repHeightWeight').textContent = `${h} cm / ${lastWeight} kg`;
+
+  const hM = h / 100;
+  const bmi = (lastWeight / (hM * hM)).toFixed(1);
+  const stdW = (hM * hM * 22).toFixed(1);
+  document.getElementById('repBmiStd').textContent = `${bmi} (適正 ${stdW}kg)`;
+  document.getElementById('repCares').textContent = (globalProfile.cares || ['高血圧', '脂質異常症']).join(', ');
+
+  // 統計集計
+  let sumSysM = 0, sumDiaM = 0, countM = 0, maxSysM = -1, minSysM = 999;
+  let sumSysN = 0, sumDiaN = 0, countN = 0, maxSysN = -1, minSysN = 999;
+  let sumPP = 0, countPP = 0, maxPP = -1, minPP = 999;
+  let sumSalt = 0, countSalt = 0, maxSalt = -1, minSalt = 999;
+  let sumSteps = 0, maxSteps = 0, countSteps = 0;
+  let sumSleep = 0, countSleep = 0;
+  let totalMedOpportunities = 0, takenMeds = 0;
+
+  const dates = [];
+  const repMSys = [], repNSys = [];
+
+  const tbody = document.getElementById('repDailyTableBody');
+  tbody.innerHTML = '';
+
+  list.forEach(r => {
+    dates.push(r.date.slice(5));
+
+    const mSys = r.morning?.bpSys || null;
+    const mDia = r.morning?.bpDia || null;
+    const mPulse = r.morning?.pulse || '-';
+    repMSys.push(mSys);
+
+    if (mSys && mDia) {
+      sumSysM += mSys; sumDiaM += mDia; countM++;
+      if (mSys > maxSysM) maxSysM = mSys;
+      if (mSys < minSysM) minSysM = mSys;
+
+      const pp = mSys - mDia;
+      sumPP += pp; countPP++;
+      if (pp > maxPP) maxPP = pp;
+      if (pp < minPP) minPP = pp;
+    }
+
+    const nSys = r.night?.bpSys || null;
+    const nDia = r.night?.bpDia || null;
+    const nPulse = r.night?.pulse || '-';
+    repNSys.push(nSys);
+
+    if (nSys && nDia) {
+      sumSysN += nSys; sumDiaN += nDia; countN++;
+      if (nSys > maxSysN) maxSysN = nSys;
+      if (nSys < minSysN) minSysN = nSys;
+    }
+
+    if (r.steps) {
+      sumSteps += r.steps; countSteps++;
+      if (r.steps > maxSteps) maxSteps = r.steps;
+    }
+
+    if (r.morning?.sleepHours) {
+      sumSleep += parseFloat(r.morning.sleepHours);
+      countSleep++;
+    }
+
+    // 服薬
+    const allMeds = [...(r.morning?.meds || []), ...(r.lunch?.meds || []), ...(r.dinner?.meds || []), ...(r.night?.meds || [])];
+    if (globalMeds.length > 0) {
+      totalMedOpportunities += 1;
+      if (allMeds.length > 0) takenMeds += 1;
+    }
+
+    // PFC・塩分
+    const pfc = calculatePFCForDay(r);
+    sumSalt += pfc.salt; countSalt++;
+    if (pfc.salt > maxSalt) maxSalt = pfc.salt;
+    if (pfc.salt < minSalt) minSalt = pfc.salt;
+
+    // 食事サマリー文字列作成
+    const foodItems = [
+      ...(r.morning?.items || []),
+      ...(r.lunch?.items || []),
+      ...(r.dinner?.items || [])
+    ].map(x => x.name).slice(0, 4).join('・');
+
+    let memoStr = foodItems || '-';
+    if (r.dinner?.alcAmount && r.dinner.alcAmount !== 'なし') {
+      memoStr += ` (酒:${r.dinner.alcAmount})`;
+    } else {
+      memoStr += ` (休肝日◎)`;
+    }
+
+    // テーブル行
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${r.date}</td>
+      <td>${mSys ? `${mSys}/${mDia}` : '--'} <small style="color:#64748b;">(${mPulse})</small></td>
+      <td>${nSys ? `${nSys}/${nDia}` : '--'} <small style="color:#64748b;">(${nPulse})</small></td>
+      <td>${(mSys && mDia) ? (mSys - mDia) : '--'}</td>
+      <td>${allMeds.length > 0 ? '済◎' : '未'}</td>
+      <td>${r.weight ? `${r.weight}` : '--'}</td>
+      <td>${r.steps ? r.steps.toLocaleString() : '--'}</td>
+      <td>${pfc.salt.toFixed(1)}g</td>
+      <td>${r.morning?.sleepHours || '--'}h</td>
+      <td style="text-align:left; font-size:8pt;">${escapeHtml(memoStr)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // サマリー値の挿入
+  const avgMSys = countM > 0 ? Math.round(sumSysM / countM) : '--';
+  const avgMDia = countM > 0 ? Math.round(sumDiaM / countM) : '--';
+  document.getElementById('rep_avg_m_bp').textContent = `${avgMSys} / ${avgMDia}`;
+  document.getElementById('rep_minmax_m_bp').textContent = countM > 0 ? `${maxSysM} / ${minSysM}` : '--';
+  document.getElementById('rep_judge_m_bp').textContent = avgMSys < 125 ? "至適 (良好)" : (avgMSys <= 135 ? "境界域" : "高血圧域");
+
+  const avgNSys = countN > 0 ? Math.round(sumSysN / countN) : '--';
+  const avgNDia = countN > 0 ? Math.round(sumDiaN / countN) : '--';
+  document.getElementById('rep_avg_n_bp').textContent = `${avgNSys} / ${avgNDia}`;
+  document.getElementById('rep_minmax_n_bp').textContent = countN > 0 ? `${maxSysN} / ${minSysN}` : '--';
+  document.getElementById('rep_judge_n_bp').textContent = countN === 0 ? "未測定" : (avgNSys < 125 ? "良好" : "高血圧警戒");
+
+  const avgPP = countPP > 0 ? Math.round(sumPP / countPP) : '--';
+  document.getElementById('rep_avg_pp').textContent = `${avgPP}`;
+  document.getElementById('rep_minmax_pp').textContent = countPP > 0 ? `${maxPP} / ${minPP}` : '--';
+  document.getElementById('rep_judge_pp').textContent = avgPP < 65 ? "適正 (血管弾性良好)" : "やや開大";
+
+  const medAdherence = totalMedOpportunities > 0 ? Math.round((takenMeds / totalMedOpportunities) * 100) : 100;
+  document.getElementById('rep_med_adherence').textContent = `${medAdherence}`;
+  document.getElementById('rep_judge_med').textContent = medAdherence >= 90 ? "優良◎" : "要改善";
+
+  const avgSalt = countSalt > 0 ? (sumSalt / countSalt).toFixed(1) : '--';
+  document.getElementById('rep_avg_salt').textContent = `${avgSalt}`;
+  document.getElementById('rep_minmax_salt').textContent = countSalt > 0 ? `${maxSalt.toFixed(1)} / ${minSalt.toFixed(1)}` : '--';
+  document.getElementById('rep_judge_salt').textContent = avgSalt <= 6.5 ? "良好 (達成)" : "微増";
+
+  const avgSteps = countSteps > 0 ? Math.round(sumSteps / countSteps).toLocaleString() : '--';
+  const avgSleep = countSleep > 0 ? (sumSleep / countSleep).toFixed(1) : '--';
+  document.getElementById('rep_avg_steps').textContent = `${avgSteps}`;
+  document.getElementById('rep_avg_sleep').textContent = `${avgSleep}`;
+
+  // 臨床評価コメント
+  let evalMsg = `<b>【JSH2019ガイドライン基準 臨床所見】:</b> `;
+  if (avgMSys < 125 && avgMDia < 75) {
+    evalMsg += `家庭血圧基準（125/75未満）を期間全体で安定して維持できています。服薬遵守率は${medAdherence}%と良好で、推定食塩摂取量も平均${avgSalt}g/日と抑制傾向です。現在の治療方針・生活習慣療法の継続を推奨します。`;
+  } else {
+    evalMsg += `朝血圧平均が ${avgMSys}/${avgMDia} mmHg であり、至適基準(125/75)に対してやや高値推移を認めています。就寝前の保温や減塩徹底、ならびに処方内容の確認が推奨されます。`;
+  }
+  document.getElementById('repClinicalEvaluationText').innerHTML = evalMsg;
+
+  // レポート用グラフ描画 (印刷用白背景最適化)
+  renderReportPrintChart(dates, repMSys, repNSys);
+}
+
+function renderReportPrintChart(labels, mSys, nSys) {
+  const ctx = document.getElementById('reportPrintChart').getContext('2d');
+  if (chartInstances.repChart) chartInstances.repChart.destroy();
+
+  chartInstances.repChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: '朝 最高血圧', data: mSys, borderColor: '#dc2626', borderWidth: 2, tension: 0.2, pointRadius: 2.5, pointBackgroundColor: '#dc2626' },
+        { label: '就寝前 最高血圧', data: nSys, borderColor: '#7c3aed', borderWidth: 2, tension: 0.2, pointRadius: 2.5, pointBackgroundColor: '#7c3aed' },
+        { label: '家庭至適基準(125)', data: Array(labels.length).fill(125), borderColor: '#16a34a', borderWidth: 1.5, borderDash: [4, 4], pointRadius: 0 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { labels: { color: '#334155', font: { size: 9 } } } },
+      scales: {
+        x: { ticks: { color: '#475569', maxTicksLimit: 14, font: { size: 8 } }, grid: { color: '#e2e8f0' } },
+        y: { min: 90, max: 170, ticks: { color: '#475569', font: { size: 8 } }, grid: { color: '#e2e8f0' } }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
