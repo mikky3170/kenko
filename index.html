@@ -1,4 +1,4 @@
-<!-- [稼働Ver 作業版 Rev.15] 2行スマートテンキーPad新設・PCビューワー同一タブ遷移・メニュー基準値誤操作防止ロック -->
+<!-- [稼働Ver 作業版 Rev.16] 上部PCビューワーボタン削除・就寝前1行健康メモ欄新設 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -74,7 +74,7 @@
     }
     .tab-btn.active { background: var(--bg-input); color: #ffffff; border: 1px solid var(--accent-blue); }
 
-    /* 2行目：日付 ＆ 水分 ＆ PCビューワーリンク */
+    /* 2行目：日付 ＆ 水分補給（PCビューワー削除で余白確保） */
     .top-row-2 {
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
     }
@@ -97,14 +97,6 @@
     .day-holiday { background: rgba(251, 113, 133, 0.35); color: #f43f5e; border: 1px solid var(--accent-rose); }
 
     .top-right-actions { display: flex; align-items: center; gap: 6px; }
-    .btn-pc-viewer {
-      background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.4);
-      color: var(--accent-blue); padding: 3px 8px; border-radius: var(--radius-sm);
-      font-size: 0.72rem; font-weight: 800; cursor: pointer; white-space: nowrap; height: 32px;
-      display: inline-flex; align-items: center; gap: 4px; text-decoration: none;
-      transition: var(--transition);
-    }
-    .btn-pc-viewer:hover { background: rgba(56, 189, 248, 0.25); color: #ffffff; border-color: var(--accent-blue); }
 
     .water-control-group { display: flex; align-items: center; gap: 3px; }
     .btn-water-quick {
@@ -279,6 +271,17 @@
       border-color: var(--accent-blue) !important;
       background-color: #1a2947 !important;
       box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
+    }
+
+    /* 1行固定・横スクロール型メモ入力欄（画面圧迫を完全に防止） */
+    .memo-single-line-input {
+      width: 100%; height: 34px; padding: 6px 10px; border-radius: var(--radius-sm);
+      border: 1px dashed rgba(56, 189, 248, 0.5); background-color: rgba(14, 25, 48, 0.6);
+      color: var(--text-main); font-size: 0.8rem; font-weight: 600;
+      white-space: nowrap; overflow-x: auto;
+    }
+    .memo-single-line-input:focus {
+      border-color: var(--accent-blue); border-style: solid; background-color: #16243f;
     }
 
     .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
@@ -492,7 +495,7 @@
     .smart-toast-body { font-size: 0.74rem; color: var(--text-main); line-height: 1.4; }
 
     /* =========================================================
-       📱 超薄型 2行スマート・テンキーPad（スマホ専用オンスクリーン）
+       📱 超薄型 2行スマート・テンキーPad（数字専用・スマホ最適化）
        ========================================================= */
     #smartNumpadWrap {
       position: fixed; bottom: 0; left: 0; right: 0;
@@ -577,14 +580,14 @@
   <div class="smart-toast-body" id="toastBody">深呼吸をして目を休めましょう。</div>
 </div>
 
-<!-- ① 上部固定バー（タイトル・バージョン一元管理バッジ・ナビ・日付・水分 ＆ PCビューワー連携） -->
+<!-- ① 上部固定バー（タイトル・バージョン一元管理バッジ・ナビ・日付・水分補給） -->
 <header id="topBarWrap">
   <div class="top-bar-inner">
     
     <div class="top-row-1">
       <div class="brand-wrap">
         <div class="brand-title">🩺 <span>健康管理くん</span></div>
-        <span class="app-version-badge" id="appVersionBadge">v1.4.1</span>
+        <span class="app-version-badge" id="appVersionBadge">v1.4.2</span>
       </div>
       <nav class="nav-tabs">
         <button class="tab-btn active" data-tab="inputTab" onclick="switchTab('inputTab')">✍️ 入力</button>
@@ -602,11 +605,7 @@
       </div>
 
       <div class="top-right-actions">
-        <!-- 同一タブ/ウィンドウ再利用指定 (target="health_kun_pc_viewer") -->
-        <a href="viewer.html" target="health_kun_pc_viewer" class="btn-pc-viewer" title="PC向け大画面・PFC分析・医師提出レポートを開く">
-          🖥️ <span style="display:inline;">PCビューワー</span>
-        </a>
-
+        <!-- 上部のPCビューワーボタンを削除し、水分補給グループをゆったり配置 -->
         <div class="water-control-group">
           <button class="btn-water-minus" title="0.25L減らす" onclick="adjustWater(-1)">-</button>
           <button class="btn-water-quick" title="飲んだらタップで0.25L加算" onclick="adjustWater(1)">
@@ -963,7 +962,7 @@
             </div>
           </div>
 
-          <!-- 🛌 就寝前スロット -->
+          <!-- 🛌 就寝前スロット（締めくくり ＆ 1行健康メモ新設） -->
           <div class="card" id="slot-night">
             <div class="card-header has-bottom-border" onclick="toggleSlotCard('night')">
               <h2 class="card-title">🛌 就寝前の締めくくり</h2>
@@ -1024,6 +1023,15 @@
               <div class="form-group setting-cond-night-weight" style="display:none;">
                 <label class="form-label">就寝前体重 (kg)</label>
                 <input type="text" id="daily_weight" class="form-control smart-num-input" placeholder="68.2" data-label="就寝前体重(kg)" data-decimal="true" data-slot="night" oninput="autoSaveField('night')">
+              </div>
+
+              <!-- 📝 新設：本日の体調・健康・食事補足メモ欄（画面圧迫を防ぐ1行固定設計・スマホ通常フリック入力） -->
+              <div class="form-group" style="margin-top:6px;">
+                <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+                  <span>📝 本日の体調・健康特記 ＆ 食事補足メモ</span>
+                  <span style="font-size:0.65rem; color:var(--accent-blue); font-weight:normal;">※診察レポート＆AIカルテ連動</span>
+                </label>
+                <input type="text" id="daily_memo" class="memo-single-line-input" placeholder="例: 午後から頭痛、熱37.2℃、風邪薬服用、ラーメンに煮卵追加など" oninput="autoSaveField('night')">
               </div>
 
               <button class="btn btn-save" onclick="saveSlot('night')">🌙 本日の全記録を完了して就寝する</button>
@@ -1216,6 +1224,7 @@
         <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           <button class="btn btn-save" style="width:auto; margin-top:0;" onclick="enableDesktopNotification()">🔔 通知を有効化する（許可）</button>
           <button class="btn btn-outline" style="font-size:0.72rem;" onclick="testDesktopNotification()">🔔 稼働状態チェック（自己診断）</button>
+          <!-- PC大画面ビューワーへのアクセスは設定画面から常時可能 -->
           <a href="viewer.html" target="health_kun_pc_viewer" class="btn btn-outline" style="font-size:0.72rem; text-decoration:none; color:var(--accent-blue); border-color:var(--accent-blue);">🖥️ PC大画面ビューワーを開く</a>
         </div>
       </div>
@@ -1420,7 +1429,7 @@
         <div class="backup-scenario-card">
           <div class="scenario-title" style="color:var(--accent-blue);">📦 【推奨】アプリの丸ごと保存 / 別端末・PCへの完全引っ越し</div>
           <div class="scenario-desc">
-            お薬リスト、メニュー設定、段階目標プロファイル、毎日の健康記録を<b>すべて1つのファイル</b>に保存します。PCビューワー（`viewer.html`）への読み込みにも使用できます。
+            お薬リスト、メニュー設定、段階目標プロファイル、毎日の健康記録・特記メモを<b>すべて1つのファイル</b>に保存します。PCビューワー（`viewer.html`）への読み込みにも使用できます。
           </div>
           <div style="display:flex; gap:6px;">
             <button class="btn btn-save" style="margin-top:0; width:auto; padding:5px 12px;" onclick="exportFullJSON()">💾 丸ごと保存 (JSON)</button>
@@ -1432,7 +1441,7 @@
         <div class="backup-scenario-card">
           <div class="scenario-title" style="color:var(--accent-green);">📊 Excelで一覧を見たいとき / 病院提出用</div>
           <div class="scenario-desc">
-            日々の血圧・体重・食事・睡眠の記録をExcelで開けるCSVファイルとして書き出します。
+            日々の血圧・体重・食事・睡眠・体調特記メモの記録をExcelで開けるCSVファイルとして書き出します。
           </div>
           <div style="display:flex; gap:6px;">
             <button class="btn btn-outline" onclick="exportDataToCSV()">📥 Excel用CSV出力</button>
@@ -1470,7 +1479,7 @@
 
       <section class="guide-section">
         <h2 class="guide-title">🧭 （２）毎日の操作手順（生活リズムに合わせた1分ルーティン）</h2>
-        <div class="guide-lead">1日に何度も長考する必要はありません。生活の節目（朝・間食・昼・晩・就寝前）に1分以内でタップするだけです。オートセーブされるため、タブを閉じても消えません。</div>
+        <div class="guide-lead">1日に何度も長考する必要はありません。生活の節目（朝・間食・昼・晩・就寝前）に1分以内でタップするだけです。オートセーブされるため、タブを閉じても消えません。就寝前にメモ欄へ一言入れておくと、診察レポートやAIカンファレンスにも反映されます。</div>
       </section>
 
       <section class="guide-section">
@@ -1498,7 +1507,7 @@
             <div class="char-name">Dr. ケン（Ken）</div>
             <div class="char-role">循環器内科専門医 / 臨床高血圧学会認定医</div>
             <div class="char-desc">
-              「日々の血圧や体重が1〜2kg変動しても慌てる必要はありません。大切なのは<b>『7日間移動平均線（SMA7）』</b>と<b>『脈圧（血管のしなやかさ）』</b>です。家庭血圧125/75mmHg未満をキープできるよう科学的に見守ります。」
+              「日々の血圧や体重が1〜2kg変動しても慌てる必要はありません。大切なのは<b>『7日間移動平均線（SMA7）』</b>と<b>『脈圧（血管のしなやかさ）』</b>です。頭痛や発熱などの体調変化もメモに残していただければ、多角的に見守ります。」
             </div>
           </div>
         </div>
@@ -1509,7 +1518,7 @@
             <div class="char-name">管理栄養士 アヤ（Aya）</div>
             <div class="char-role">臨床病態栄養指導士 / 食習慣コーチ</div>
             <div class="char-desc">
-              「ラーメンやステーキ、ハンバーグやお酒も大切な楽しみです！食べた日もカリウム（野菜・豆乳）で賢く相殺すれば全く問題ありません。生卵・ゆで卵・卵焼きなどのサブメニューも直感的に選べるようサポートします！」
+              「ラーメンやステーキ、ハンバーグやお酒も大切な楽しみです！卵料理（生卵・ゆで卵・卵焼き）の量も半量・1個・2個から選べるようになりました。ぴったりな品がない時もメモ欄に補足を書いていただければしっかり拾います！」
             </div>
           </div>
         </div>
@@ -1663,7 +1672,7 @@
   </div>
 </footer>
 
-<!-- 📱 超薄型 2行スマート・テンキーPad（1行目: 1〜0 / 2行目: . / ⌫ / クリア / 次へ） -->
+<!-- 📱 超薄型 2行スマート・テンキーPad（数字専用・スマホ最適化） -->
 <div id="smartNumpadWrap">
   <div class="numpad-header">
     <div class="numpad-title-tag">
