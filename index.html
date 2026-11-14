@@ -1,9 +1,9 @@
-<!-- [稼働Ver 作業版 Rev.14] 新規追加メニュー対応＆PC臨床ビューワー(viewer.html)連携ナビゲーションの実装 -->
+<!-- [稼働Ver 作業版 Rev.15] 2行スマートテンキーPad新設・PCビューワー同一タブ遷移・メニュー基準値誤操作防止ロック -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>健康管理くん - Professional Health Tracker</title>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -274,6 +274,13 @@
     .form-control:focus { outline: none; border-color: var(--border-focus); }
     .form-control.unselected { color: var(--text-muted) !important; }
     
+    /* スマートテンキー連動フォーカススタイル */
+    .form-control.smart-active-input {
+      border-color: var(--accent-blue) !important;
+      background-color: #1a2947 !important;
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
+    }
+
     .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
     .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
     .grid-4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
@@ -408,7 +415,6 @@
     .settings-table td.center { text-align: center; }
     .menu-master-scroll { max-height: 380px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; margin-top: 6px; position: relative; }
     .table-input { width: 100%; padding: 3px 4px; border-radius: 3px; border: 1px solid var(--border); background-color: var(--bg-input); color: var(--text-main); font-size: 0.74rem; }
-    .table-input-compact { padding: 3px 2px; text-align: center; font-size: 0.72rem; }
 
     .backup-scenario-card {
       background: rgba(8, 12, 22, 0.6); border: 1px solid var(--border);
@@ -432,7 +438,6 @@
       border-radius: var(--radius-sm); padding: 10px; margin-bottom: 10px;
       transition: border-color 0.4s ease, box-shadow 0.4s ease;
     }
-    /* ダイレクト遷移時のフォーカス点滅 */
     .guide-step-card.target-highlight {
       border-color: var(--accent-blue);
       box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
@@ -486,6 +491,70 @@
     .smart-toast-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; font-size: 0.78rem; font-weight: 800; color: var(--accent-blue); }
     .smart-toast-body { font-size: 0.74rem; color: var(--text-main); line-height: 1.4; }
 
+    /* =========================================================
+       📱 超薄型 2行スマート・テンキーPad（スマホ専用オンスクリーン）
+       ========================================================= */
+    #smartNumpadWrap {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(11, 17, 33, 0.98); backdrop-filter: blur(12px);
+      border-top: 2px solid var(--accent-blue); z-index: 2500;
+      box-shadow: 0 -8px 25px rgba(0,0,0,0.8);
+      transform: translateY(105%); transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      padding: 4px 6px 6px;
+    }
+    #smartNumpadWrap.open {
+      transform: translateY(0);
+    }
+    .numpad-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 2px 6px 4px; border-bottom: 1px solid rgba(40, 54, 84, 0.6); margin-bottom: 4px;
+    }
+    .numpad-title-tag {
+      font-size: 0.72rem; font-weight: 800; color: var(--accent-blue);
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .numpad-val-preview {
+      font-size: 0.82rem; font-weight: 900; color: #ffffff;
+      background: rgba(0, 0, 0, 0.4); padding: 1px 8px; border-radius: 4px; border: 1px solid var(--border);
+    }
+    .btn-numpad-close {
+      background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+      border-radius: 4px; font-size: 0.68rem; font-weight: 800; padding: 2px 7px; cursor: pointer;
+    }
+
+    /* 2行キーボードグリッド */
+    .numpad-grid-row1 {
+      display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; margin-bottom: 4px;
+    }
+    .numpad-grid-row2 {
+      display: grid; grid-template-columns: 1fr 1fr 1.3fr 1.5fr; gap: 4px;
+    }
+    .num-key {
+      background: #1e2942; border: 1px solid #33446b; border-radius: 6px;
+      color: #ffffff; font-size: 1.05rem; font-weight: 900; height: 38px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; user-select: none; transition: var(--transition);
+    }
+    .num-key:active {
+      background: var(--accent-blue); color: #080c16; transform: scale(0.96);
+    }
+    .num-key.key-fn {
+      background: #151e33; border-color: #2b3b5e; color: var(--text-muted); font-size: 0.78rem; font-weight: 800;
+    }
+    .num-key.key-fn:active {
+      background: #233252; color: #ffffff;
+    }
+    .num-key.key-next {
+      background: linear-gradient(135deg, #0284c7, #2563eb); border: none; color: #ffffff; font-size: 0.8rem; font-weight: 900;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+    }
+    .num-key.key-next:active {
+      background: #0284c7; transform: scale(0.96);
+    }
+    .num-key.disabled {
+      opacity: 0.35; pointer-events: none;
+    }
+
     /* モーダル */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 2000; opacity: 0; visibility: hidden; transition: var(--transition); }
     .modal-overlay.show { opacity: 1; visibility: visible; }
@@ -499,7 +568,7 @@
 </head>
 <body>
 
-<!-- 画面内スマート・トースト通知コンテナ（スマホでのIllegal constructor完全回避） -->
+<!-- 画面内スマート・トースト通知コンテナ（スマホ対応） -->
 <div id="smartToastContainer" class="smart-toast" onclick="hideSmartToast()">
   <div class="smart-toast-header">
     <span id="toastTitle">🩺 Dr.ケンからのスマート見守り</span>
@@ -515,7 +584,7 @@
     <div class="top-row-1">
       <div class="brand-wrap">
         <div class="brand-title">🩺 <span>健康管理くん</span></div>
-        <span class="app-version-badge" id="appVersionBadge">v1.4.0</span>
+        <span class="app-version-badge" id="appVersionBadge">v1.4.1</span>
       </div>
       <nav class="nav-tabs">
         <button class="tab-btn active" data-tab="inputTab" onclick="switchTab('inputTab')">✍️ 入力</button>
@@ -533,7 +602,8 @@
       </div>
 
       <div class="top-right-actions">
-        <a href="viewer.html" target="_blank" class="btn-pc-viewer" title="PC向け大画面・PFC分析・医師提出レポートを開く">
+        <!-- 同一タブ/ウィンドウ再利用指定 (target="health_kun_pc_viewer") -->
+        <a href="viewer.html" target="health_kun_pc_viewer" class="btn-pc-viewer" title="PC向け大画面・PFC分析・医師提出レポートを開く">
           🖥️ <span style="display:inline;">PCビューワー</span>
         </a>
 
@@ -573,7 +643,7 @@
               <div class="form-group">
                 <label class="form-label">😴 昨晩の睡眠 (時間 & 質)</label>
                 <div class="grid-2">
-                  <input type="number" step="0.1" id="m_sleepHours" class="form-control" placeholder="7.0" oninput="autoSaveField('morning')">
+                  <input type="text" id="m_sleepHours" class="form-control smart-num-input" placeholder="7.0" data-label="昨晩の睡眠時間(h)" data-decimal="true" data-slot="morning" oninput="autoSaveField('morning')">
                   <select id="m_sleepQuality" class="form-control unselected" onchange="handleSelectChange(this); autoSaveField('morning');">
                     <option value="" disabled selected hidden>質を選択</option>
                     <option value="熟睡">熟睡◎</option>
@@ -586,19 +656,19 @@
               <div class="grid-4 setting-cond-morning-bp">
                 <div class="form-group">
                   <label class="form-label">最高血圧 (上)</label>
-                  <input type="number" id="m_bpSys" class="form-control" placeholder="122" oninput="autoSaveField('morning')">
+                  <input type="text" id="m_bpSys" class="form-control smart-num-input" placeholder="122" data-label="朝 最高血圧(上)" data-decimal="false" data-slot="morning" oninput="autoSaveField('morning')">
                 </div>
                 <div class="form-group">
                   <label class="form-label">最低血圧 (下)</label>
-                  <input type="number" id="m_bpDia" class="form-control" placeholder="74" oninput="autoSaveField('morning')">
+                  <input type="text" id="m_bpDia" class="form-control smart-num-input" placeholder="74" data-label="朝 最低血圧(下)" data-decimal="false" data-slot="morning" oninput="autoSaveField('morning')">
                 </div>
                 <div class="form-group">
                   <label class="form-label">脈拍 (bpm)</label>
-                  <input type="number" id="m_pulse" class="form-control" placeholder="68" oninput="autoSaveField('morning')">
+                  <input type="text" id="m_pulse" class="form-control smart-num-input" placeholder="68" data-label="朝 脈拍(bpm)" data-decimal="false" data-slot="morning" oninput="autoSaveField('morning')">
                 </div>
                 <div class="form-group setting-cond-morning-weight" style="display:none;">
                   <label class="form-label">体重 (kg)</label>
-                  <input type="number" step="0.1" id="m_weight" class="form-control" placeholder="68.2" oninput="autoSaveField('morning')">
+                  <input type="text" id="m_weight" class="form-control smart-num-input" placeholder="68.2" data-label="朝の体重(kg)" data-decimal="true" data-slot="morning" oninput="autoSaveField('morning')">
                 </div>
               </div>
 
@@ -635,7 +705,7 @@
                   </div>
                   <div class="chip-group" id="m_chips_soup"></div>
 
-                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・麻婆・小鉢)</div>
+                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・麻婆・卵・小鉢)</div>
                   <div class="chip-group" id="m_chips_side"></div>
 
                   <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; margin-top:3px;">☕ 飲料</div>
@@ -686,9 +756,9 @@
 
             <div class="card-body" id="body-lunch">
               <div class="grid-3 setting-cond-lunch-bp" style="display:none; margin-bottom:6px;">
-                <input type="number" id="l_bpSys" class="form-control" placeholder="最高(上)" oninput="autoSaveField('lunch')">
-                <input type="number" id="l_bpDia" class="form-control" placeholder="最低(下)" oninput="autoSaveField('lunch')">
-                <input type="number" id="l_pulse" class="form-control" placeholder="脈拍" oninput="autoSaveField('lunch')">
+                <input type="text" id="l_bpSys" class="form-control smart-num-input" placeholder="最高(上)" data-label="昼 最高血圧(上)" data-decimal="false" data-slot="lunch" oninput="autoSaveField('lunch')">
+                <input type="text" id="l_bpDia" class="form-control smart-num-input" placeholder="最低(下)" data-label="昼 最低血圧(下)" data-decimal="false" data-slot="lunch" oninput="autoSaveField('lunch')">
+                <input type="text" id="l_pulse" class="form-control smart-num-input" placeholder="脈拍" data-label="昼 脈拍(bpm)" data-decimal="false" data-slot="lunch" oninput="autoSaveField('lunch')">
               </div>
 
               <div class="form-group setting-cond-lunch-med" style="display:none;">
@@ -724,7 +794,7 @@
                   </div>
                   <div class="chip-group" id="l_chips_soup"></div>
 
-                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・麻婆・小鉢)</div>
+                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・麻婆・卵・小鉢)</div>
                   <div class="chip-group" id="l_chips_side"></div>
 
                   <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; margin-top:3px;">☕ 飲料</div>
@@ -756,9 +826,9 @@
 
             <div class="card-body" id="body-dinner">
               <div class="grid-3 setting-cond-dinner-bp" style="display:none; margin-bottom:6px;">
-                <input type="number" id="d_bpSys" class="form-control" placeholder="最高(上)" oninput="autoSaveField('dinner')">
-                <input type="number" id="d_bpDia" class="form-control" placeholder="最低(下)" oninput="autoSaveField('dinner')">
-                <input type="number" id="d_pulse" class="form-control" placeholder="脈拍" oninput="autoSaveField('dinner')">
+                <input type="text" id="d_bpSys" class="form-control smart-num-input" placeholder="最高(上)" data-label="晩 最高血圧(上)" data-decimal="false" data-slot="dinner" oninput="autoSaveField('dinner')">
+                <input type="text" id="d_bpDia" class="form-control smart-num-input" placeholder="最低(下)" data-label="晩 最低血圧(下)" data-decimal="false" data-slot="dinner" oninput="autoSaveField('dinner')">
+                <input type="text" id="d_pulse" class="form-control smart-num-input" placeholder="脈拍" data-label="晩 脈拍(bpm)" data-decimal="false" data-slot="dinner" oninput="autoSaveField('dinner')">
               </div>
 
               <div class="form-group setting-cond-dinner-med">
@@ -794,7 +864,7 @@
                   </div>
                   <div class="chip-group" id="d_chips_soup"></div>
 
-                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・麻婆・小鉢)</div>
+                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・麻婆・卵・小鉢)</div>
                   <div class="chip-group" id="d_chips_side"></div>
 
                   <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; margin-top:3px;">☕ 飲料</div>
@@ -907,14 +977,14 @@
               <div class="grid-2">
                 <div class="form-group">
                   <label class="form-label">🚶‍♂️ 本日の総歩数 (歩)</label>
-                  <input type="text" id="daily_steps" class="form-control" placeholder="例: 8,000" onfocus="handleStepsFocus(this)" onblur="handleStepsBlur(this)" oninput="autoSaveField('night')">
+                  <input type="text" id="daily_steps" class="form-control smart-num-input" placeholder="例: 8,000" data-label="本日の総歩数(歩)" data-decimal="false" data-steps="true" data-slot="night" onfocus="handleStepsFocus(this)" onblur="handleStepsBlur(this)" oninput="autoSaveField('night')">
                 </div>
 
                 <div class="form-group setting-cond-night-bp">
                   <label class="form-label">就寝前血圧 (上 / 下)</label>
                   <div class="grid-2">
-                    <input type="number" id="n_bpSys" class="form-control" placeholder="118" oninput="autoSaveField('night')">
-                    <input type="number" id="n_bpDia" class="form-control" placeholder="72" oninput="autoSaveField('night')">
+                    <input type="text" id="n_bpSys" class="form-control smart-num-input" placeholder="118" data-label="就寝前 最高血圧(上)" data-decimal="false" data-slot="night" oninput="autoSaveField('night')">
+                    <input type="text" id="n_bpDia" class="form-control smart-num-input" placeholder="72" data-label="就寝前 最低血圧(下)" data-decimal="false" data-slot="night" oninput="autoSaveField('night')">
                   </div>
                 </div>
               </div>
@@ -953,7 +1023,7 @@
 
               <div class="form-group setting-cond-night-weight" style="display:none;">
                 <label class="form-label">就寝前体重 (kg)</label>
-                <input type="number" step="0.1" id="daily_weight" class="form-control" placeholder="68.2" oninput="autoSaveField('night')">
+                <input type="text" id="daily_weight" class="form-control smart-num-input" placeholder="68.2" data-label="就寝前体重(kg)" data-decimal="true" data-slot="night" oninput="autoSaveField('night')">
               </div>
 
               <button class="btn btn-save" onclick="saveSlot('night')">🌙 本日の全記録を完了して就寝する</button>
@@ -1146,7 +1216,7 @@
         <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           <button class="btn btn-save" style="width:auto; margin-top:0;" onclick="enableDesktopNotification()">🔔 通知を有効化する（許可）</button>
           <button class="btn btn-outline" style="font-size:0.72rem;" onclick="testDesktopNotification()">🔔 稼働状態チェック（自己診断）</button>
-          <a href="viewer.html" target="_blank" class="btn btn-outline" style="font-size:0.72rem; text-decoration:none; color:var(--accent-blue); border-color:var(--accent-blue);">🖥️ PC大画面ビューワーを開く</a>
+          <a href="viewer.html" target="health_kun_pc_viewer" class="btn btn-outline" style="font-size:0.72rem; text-decoration:none; color:var(--accent-blue); border-color:var(--accent-blue);">🖥️ PC大画面ビューワーを開く</a>
         </div>
       </div>
 
@@ -1314,14 +1384,14 @@
         </table>
       </div>
 
-      <!-- 食事パーツ設定（全品マスタ） -->
+      <!-- 食事パーツ設定（全品マスタ・誤操作防止ロック済） -->
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <h2 class="card-title">🍱 食事パーツ設定（全品マスタ）</h2>
           <button class="btn btn-outline" style="padding:2px 8px; font-size:0.7rem;" onclick="resetMenusToDefault()">↺ 初期値に戻す</button>
         </div>
         <div style="font-size:0.71rem; color:var(--text-muted); margin-top:3px; margin-bottom:5px;">
-          ※区分ごとに整列しています。各時間帯への表示と栄養基準値を編集できます。
+          ※各時間帯の表示・非表示を設定できます。基準値（kcal・塩分）は誤操作防止のため安全にロック（閲覧専用）されています。
         </div>
         <div class="menu-master-scroll">
           <table class="settings-table">
@@ -1333,14 +1403,14 @@
                 <th style="width: 26px;">昼</th>
                 <th style="width: 26px;">晩</th>
                 <th style="width: 26px;">夜</th>
-                <th style="width: 46px;">kcal</th>
-                <th style="width: 40px;">塩分</th>
+                <th style="width: 48px;">kcal</th>
+                <th style="width: 42px;">塩分</th>
               </tr>
             </thead>
             <tbody id="menuMasterTableBody"></tbody>
           </table>
         </div>
-        <button class="btn btn-save" style="margin-top:8px;" onclick="saveMenuMasterChanges()">💾 メニュー設定を保存</button>
+        <button class="btn btn-save" style="margin-top:8px;" onclick="saveMenuMasterChanges()">💾 表示時間帯の設定を保存</button>
       </div>
 
       <!-- バックアップ＆リセットUI -->
@@ -1439,7 +1509,7 @@
             <div class="char-name">管理栄養士 アヤ（Aya）</div>
             <div class="char-role">臨床病態栄養指導士 / 食習慣コーチ</div>
             <div class="char-desc">
-              「ラーメンやステーキ、ハンバーグやお酒も大切な楽しみです！食べた日もカリウム（野菜・豆乳）で賢く相殺すれば全く問題ありません。グラム数や枚数も直感的に選べるようサポートします！」
+              「ラーメンやステーキ、ハンバーグやお酒も大切な楽しみです！食べた日もカリウム（野菜・豆乳）で賢く相殺すれば全く問題ありません。生卵・ゆで卵・卵焼きなどのサブメニューも直感的に選べるようサポートします！」
             </div>
           </div>
         </div>
@@ -1592,6 +1662,39 @@
     </div>
   </div>
 </footer>
+
+<!-- 📱 超薄型 2行スマート・テンキーPad（1行目: 1〜0 / 2行目: . / ⌫ / クリア / 次へ） -->
+<div id="smartNumpadWrap">
+  <div class="numpad-header">
+    <div class="numpad-title-tag">
+      <span>⌨️</span> <span id="numpadInputLabel">入力欄</span>:
+      <span class="numpad-val-preview" id="numpadValPreview">--</span>
+    </div>
+    <button class="btn-numpad-close" onclick="closeSmartNumpad()">✕ 閉じる</button>
+  </div>
+  
+  <!-- 1行目: 1から0までの数字キー -->
+  <div class="numpad-grid-row1">
+    <button class="num-key" onclick="pressNumKey('1')">1</button>
+    <button class="num-key" onclick="pressNumKey('2')">2</button>
+    <button class="num-key" onclick="pressNumKey('3')">3</button>
+    <button class="num-key" onclick="pressNumKey('4')">4</button>
+    <button class="num-key" onclick="pressNumKey('5')">5</button>
+    <button class="num-key" onclick="pressNumKey('6')">6</button>
+    <button class="num-key" onclick="pressNumKey('7')">7</button>
+    <button class="num-key" onclick="pressNumKey('8')">8</button>
+    <button class="num-key" onclick="pressNumKey('9')">9</button>
+    <button class="num-key" onclick="pressNumKey('0')">0</button>
+  </div>
+
+  <!-- 2行目: 機能キー（. / ⌫ / クリア / 次へ） -->
+  <div class="numpad-grid-row2">
+    <button class="num-key key-fn" id="btnNumDot" onclick="pressNumKey('.')">.</button>
+    <button class="num-key key-fn" onclick="pressNumBack()">⌫</button>
+    <button class="num-key key-fn" onclick="pressNumClear()">クリア (C)</button>
+    <button class="num-key key-next" id="btnNumNext" onclick="pressNumNext()">次へ ↵</button>
+  </div>
+</div>
 
 <!-- 称賛モーダル -->
 <div class="modal-overlay" id="praiseModal" onclick="closePraiseModal(event)">
