@@ -1,4 +1,4 @@
-<!-- [稼働Ver 作業版 Rev.12] 早見表からガイド図解へのダイレクト遷移＆双方向ナビゲーションの実装 -->
+<!-- [稼働Ver 作業版 Rev.14] 新規追加メニュー対応＆PC臨床ビューワー(viewer.html)連携ナビゲーションの実装 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -74,7 +74,7 @@
     }
     .tab-btn.active { background: var(--bg-input); color: #ffffff; border: 1px solid var(--accent-blue); }
 
-    /* 2行目：日付 ＆ 水分 */
+    /* 2行目：日付 ＆ 水分 ＆ PCビューワーリンク */
     .top-row-2 {
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
     }
@@ -95,6 +95,16 @@
     .day-sat { background: rgba(56, 189, 248, 0.3); color: #60a5fa; }
     .day-sun { background: rgba(251, 113, 133, 0.25); color: var(--accent-rose); }
     .day-holiday { background: rgba(251, 113, 133, 0.35); color: #f43f5e; border: 1px solid var(--accent-rose); }
+
+    .top-right-actions { display: flex; align-items: center; gap: 6px; }
+    .btn-pc-viewer {
+      background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.4);
+      color: var(--accent-blue); padding: 3px 8px; border-radius: var(--radius-sm);
+      font-size: 0.72rem; font-weight: 800; cursor: pointer; white-space: nowrap; height: 32px;
+      display: inline-flex; align-items: center; gap: 4px; text-decoration: none;
+      transition: var(--transition);
+    }
+    .btn-pc-viewer:hover { background: rgba(56, 189, 248, 0.25); color: #ffffff; border-color: var(--accent-blue); }
 
     .water-control-group { display: flex; align-items: center; gap: 3px; }
     .btn-water-quick {
@@ -498,14 +508,14 @@
   <div class="smart-toast-body" id="toastBody">深呼吸をして目を休めましょう。</div>
 </div>
 
-<!-- ① 上部固定バー（タイトル・バージョン一元管理バッジ・ナビ・日付・水分） -->
+<!-- ① 上部固定バー（タイトル・バージョン一元管理バッジ・ナビ・日付・水分 ＆ PCビューワー連携） -->
 <header id="topBarWrap">
   <div class="top-bar-inner">
     
     <div class="top-row-1">
       <div class="brand-wrap">
         <div class="brand-title">🩺 <span>健康管理くん</span></div>
-        <span class="app-version-badge" id="appVersionBadge">v1.3.1</span>
+        <span class="app-version-badge" id="appVersionBadge">v1.4.0</span>
       </div>
       <nav class="nav-tabs">
         <button class="tab-btn active" data-tab="inputTab" onclick="switchTab('inputTab')">✍️ 入力</button>
@@ -522,11 +532,17 @@
         <span id="dateBadge" class="day-badge day-weekday">月</span>
       </div>
 
-      <div class="water-control-group">
-        <button class="btn-water-minus" title="0.25L減らす" onclick="adjustWater(-1)">-</button>
-        <button class="btn-water-quick" title="飲んだらタップで0.25L加算" onclick="adjustWater(1)">
-          💧 <span id="topWaterText">0杯</span> [＋]
-        </button>
+      <div class="top-right-actions">
+        <a href="viewer.html" target="_blank" class="btn-pc-viewer" title="PC向け大画面・PFC分析・医師提出レポートを開く">
+          🖥️ <span style="display:inline;">PCビューワー</span>
+        </a>
+
+        <div class="water-control-group">
+          <button class="btn-water-minus" title="0.25L減らす" onclick="adjustWater(-1)">-</button>
+          <button class="btn-water-quick" title="飲んだらタップで0.25L加算" onclick="adjustWater(1)">
+            💧 <span id="topWaterText">0杯</span> [＋]
+          </button>
+        </div>
       </div>
     </div>
 
@@ -610,7 +626,7 @@
 
               <div id="m_mealComponentArea" class="meal-split-container">
                 <div class="meal-picker-left">
-                  <div style="font-size:0.72rem; color:var(--accent-blue); font-weight:700; margin-bottom:2px;">🍚 主食・丼・麺・カレー</div>
+                  <div style="font-size:0.72rem; color:var(--accent-blue); font-weight:700; margin-bottom:2px;">🍚 主食・丼・麺・カレー・寿司</div>
                   <div class="chip-group" id="m_chips_main"></div>
                   
                   <div style="display:flex; align-items:center; gap:6px; margin:3px 0;">
@@ -619,7 +635,7 @@
                   </div>
                   <div class="chip-group" id="m_chips_soup"></div>
 
-                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず</div>
+                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・麻婆・小鉢)</div>
                   <div class="chip-group" id="m_chips_side"></div>
 
                   <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; margin-top:3px;">☕ 飲料</div>
@@ -699,7 +715,7 @@
 
               <div id="l_mealComponentArea" class="meal-split-container">
                 <div class="meal-picker-left">
-                  <div style="font-size:0.72rem; color:var(--accent-blue); font-weight:700; margin-bottom:2px;">🍚 主食・丼・麺・カレー</div>
+                  <div style="font-size:0.72rem; color:var(--accent-blue); font-weight:700; margin-bottom:2px;">🍚 主食・丼・麺・カレー・寿司</div>
                   <div class="chip-group" id="l_chips_main"></div>
                   
                   <div style="display:flex; align-items:center; gap:6px; margin:3px 0;">
@@ -708,7 +724,7 @@
                   </div>
                   <div class="chip-group" id="l_chips_soup"></div>
 
-                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず</div>
+                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・麻婆・小鉢)</div>
                   <div class="chip-group" id="l_chips_side"></div>
 
                   <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; margin-top:3px;">☕ 飲料</div>
@@ -769,7 +785,7 @@
 
               <div id="d_mealComponentArea" class="meal-split-container">
                 <div class="meal-picker-left">
-                  <div style="font-size:0.72rem; color:var(--accent-blue); font-weight:700; margin-bottom:2px;">🍚 主食・丼・麺・カレー</div>
+                  <div style="font-size:0.72rem; color:var(--accent-blue); font-weight:700; margin-bottom:2px;">🍚 主食・丼・麺・カレー・寿司</div>
                   <div class="chip-group" id="d_chips_main"></div>
                   
                   <div style="display:flex; align-items:center; gap:6px; margin:3px 0;">
@@ -778,7 +794,7 @@
                   </div>
                   <div class="chip-group" id="d_chips_soup"></div>
 
-                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず</div>
+                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・麻婆・小鉢)</div>
                   <div class="chip-group" id="d_chips_side"></div>
 
                   <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; margin-top:3px;">☕ 飲料</div>
@@ -1130,6 +1146,7 @@
         <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           <button class="btn btn-save" style="width:auto; margin-top:0;" onclick="enableDesktopNotification()">🔔 通知を有効化する（許可）</button>
           <button class="btn btn-outline" style="font-size:0.72rem;" onclick="testDesktopNotification()">🔔 稼働状態チェック（自己診断）</button>
+          <a href="viewer.html" target="_blank" class="btn btn-outline" style="font-size:0.72rem; text-decoration:none; color:var(--accent-blue); border-color:var(--accent-blue);">🖥️ PC大画面ビューワーを開く</a>
         </div>
       </div>
 
@@ -1297,7 +1314,7 @@
         </table>
       </div>
 
-      <!-- 食事パーツ設定（No列廃止・横幅最適化・メニュー名最大化） -->
+      <!-- 食事パーツ設定（全品マスタ） -->
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <h2 class="card-title">🍱 食事パーツ設定（全品マスタ）</h2>
@@ -1333,7 +1350,7 @@
         <div class="backup-scenario-card">
           <div class="scenario-title" style="color:var(--accent-blue);">📦 【推奨】アプリの丸ごと保存 / 別端末・PCへの完全引っ越し</div>
           <div class="scenario-desc">
-            お薬リスト、メニュー設定、段階目標プロファイル、毎日の健康記録を<b>すべて1つのファイル</b>に保存します。
+            お薬リスト、メニュー設定、段階目標プロファイル、毎日の健康記録を<b>すべて1つのファイル</b>に保存します。PCビューワー（`viewer.html`）への読み込みにも使用できます。
           </div>
           <div style="display:flex; gap:6px;">
             <button class="btn btn-save" style="margin-top:0; width:auto; padding:5px 12px;" onclick="exportFullJSON()">💾 丸ごと保存 (JSON)</button>
