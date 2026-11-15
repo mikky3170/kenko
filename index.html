@@ -1,4 +1,4 @@
-<!-- [稼働Ver 作業版 Rev.16] 上部PCビューワーボタン削除・就寝前1行健康メモ欄新設 -->
+<!-- [稼働Ver 作業版 Rev.17] v1.4.3更新・昼食デフォルト家食統一・スマホトレイCSSはみ出し完全防護 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -57,7 +57,7 @@
     .brand-title { font-size: 1.0rem; font-weight: 900; color: #ffffff; white-space: nowrap; display: flex; align-items: center; gap: 3px; letter-spacing: 0.3px; }
     .brand-title span { color: var(--accent-blue); }
 
-    /* バージョンバッジ（代表ファイル1箇所集中） */
+    /* バージョンバッジ（代表ファイル1箇所集中：v1.4.3） */
     .app-version-badge {
       font-size: 0.68rem; font-weight: 800; color: var(--accent-blue);
       border: 1px solid #0284c7; background: rgba(2, 132, 199, 0.18);
@@ -74,7 +74,7 @@
     }
     .tab-btn.active { background: var(--bg-input); color: #ffffff; border: 1px solid var(--accent-blue); }
 
-    /* 2行目：日付 ＆ 水分補給（PCビューワー削除で余白確保） */
+    /* 2行目：日付 ＆ 水分補給 */
     .top-row-2 {
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
     }
@@ -273,7 +273,7 @@
       box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
     }
 
-    /* 1行固定・横スクロール型メモ入力欄（画面圧迫を完全に防止） */
+    /* 1行固定・横スクロール型メモ入力欄 */
     .memo-single-line-input {
       width: 100%; height: 34px; padding: 6px 10px; border-radius: var(--radius-sm);
       border: 1px dashed rgba(56, 189, 248, 0.5); background-color: rgba(14, 25, 48, 0.6);
@@ -327,18 +327,36 @@
     
     .tray-item {
       background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
-      padding: 5px 7px; margin-bottom: 5px; display: flex; flex-direction: column; gap: 3px;
+      padding: 5px 7px; margin-bottom: 5px; display: flex; flex-direction: column; gap: 4px;
     }
     .tray-item:last-child { margin-bottom: 0; }
-    .tray-item-top { display: flex; justify-content: space-between; align-items: center; gap: 4px; }
-    .tray-item-title { font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+    
+    /* トレイ上部：料理名と量ボタン（少・普・多・✕）のスマホ崩れ防止 */
+    .tray-item-top {
+      display: flex; justify-content: space-between; align-items: center; gap: 4px; flex-wrap: wrap;
+    }
+    .tray-item-title {
+      font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 110px;
+    }
+    
+    /* トレイ下部：サブメニュー行のはみ出し・改行落ち完全防護CSS */
     .tray-item-sub-row {
-      display: flex; justify-content: space-between; align-items: center;
-      background: rgba(8, 12, 22, 0.4); padding: 3px 5px; border-radius: 4px; border: 1px solid rgba(40, 54, 84, 0.6);
+      display: flex; justify-content: space-between; align-items: center; gap: 6px;
+      background: rgba(8, 12, 22, 0.4); padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(40, 54, 84, 0.6);
+      width: 100%; min-width: 0;
+    }
+    .tray-item-sub-row > div:first-child {
+      display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; overflow: hidden;
+    }
+    .subtype-select-box {
+      background: var(--bg-input); border: 1px solid var(--accent-blue); color: #ffffff;
+      font-size: 0.72rem; border-radius: 4px; padding: 2px 4px; font-weight: 700; outline: none;
+      max-width: 100%; width: 100%; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
     }
     .tray-item-single-row { display: flex; justify-content: flex-end; align-items: center; font-size: 0.68rem; }
-    .subtype-select-box { background: var(--bg-input); border: 1px solid var(--accent-blue); color: #ffffff; font-size: 0.7rem; border-radius: 4px; padding: 2px 4px; font-weight: 700; outline: none; }
-    .tray-item-calsalt { font-size: 0.68rem; color: var(--accent-amber); font-weight: 700; white-space: nowrap; }
+    .tray-item-calsalt {
+      font-size: 0.68rem; color: var(--accent-amber); font-weight: 700; white-space: nowrap; flex-shrink: 0; margin-left: auto;
+    }
 
     .snack-grid-tray {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -431,7 +449,7 @@
       border-radius: var(--radius-sm); padding: 8px; margin-top: 6px;
     }
 
-    /* ガイド画面 ＆ 軽量SVG図解カード */
+    /* ガイド画面 */
     .guide-section { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
     .guide-title { font-size: 1.0rem; font-weight: 800; color: #ffffff; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid rgba(40, 54, 84, 0.6); padding-bottom: 5px; }
     .guide-lead { font-size: 0.8rem; color: var(--text-main); margin-bottom: 8px; line-height: 1.5; }
@@ -494,9 +512,7 @@
     .smart-toast-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; font-size: 0.78rem; font-weight: 800; color: var(--accent-blue); }
     .smart-toast-body { font-size: 0.74rem; color: var(--text-main); line-height: 1.4; }
 
-    /* =========================================================
-       📱 超薄型 2行スマート・テンキーPad（数字専用・スマホ最適化）
-       ========================================================= */
+    /* 📱 超薄型 2行スマート・テンキーPad（数字専用・スマホ最適化） */
     #smartNumpadWrap {
       position: fixed; bottom: 0; left: 0; right: 0;
       background: rgba(11, 17, 33, 0.98); backdrop-filter: blur(12px);
@@ -525,7 +541,6 @@
       border-radius: 4px; font-size: 0.68rem; font-weight: 800; padding: 2px 7px; cursor: pointer;
     }
 
-    /* 2行キーボードグリッド */
     .numpad-grid-row1 {
       display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; margin-bottom: 4px;
     }
@@ -580,14 +595,14 @@
   <div class="smart-toast-body" id="toastBody">深呼吸をして目を休めましょう。</div>
 </div>
 
-<!-- ① 上部固定バー（タイトル・バージョン一元管理バッジ・ナビ・日付・水分補給） -->
+<!-- ① 上部固定バー（タイトル・バージョン一元管理バッジ v1.4.3・ナビ・日付・水分補給） -->
 <header id="topBarWrap">
   <div class="top-bar-inner">
     
     <div class="top-row-1">
       <div class="brand-wrap">
         <div class="brand-title">🩺 <span>健康管理くん</span></div>
-        <span class="app-version-badge" id="appVersionBadge">v1.4.2</span>
+        <span class="app-version-badge" id="appVersionBadge">v1.4.3</span>
       </div>
       <nav class="nav-tabs">
         <button class="tab-btn active" data-tab="inputTab" onclick="switchTab('inputTab')">✍️ 入力</button>
@@ -605,7 +620,6 @@
       </div>
 
       <div class="top-right-actions">
-        <!-- 上部のPCビューワーボタンを削除し、水分補給グループをゆったり配置 -->
         <div class="water-control-group">
           <button class="btn-water-minus" title="0.25L減らす" onclick="adjustWater(-1)">-</button>
           <button class="btn-water-quick" title="飲んだらタップで0.25L加算" onclick="adjustWater(1)">
@@ -704,7 +718,7 @@
                   </div>
                   <div class="chip-group" id="m_chips_soup"></div>
 
-                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・麻婆・卵・小鉢)</div>
+                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・焼き鳥・卵・小鉢)</div>
                   <div class="chip-group" id="m_chips_side"></div>
 
                   <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; margin-top:3px;">☕ 飲料</div>
@@ -743,7 +757,7 @@
             </div>
           </div>
 
-          <!-- ☀️ 昼スロット -->
+          <!-- ☀️ 昼スロット（デフォルト家食に統一） -->
           <div class="card" id="slot-lunch">
             <div class="card-header has-bottom-border" onclick="toggleSlotCard('lunch')">
               <h2 class="card-title">☀️ 昼の記録</h2>
@@ -776,8 +790,8 @@
                   <button class="btn-copy" onclick="copyPreviousMeal('lunch')">↺ 前回の昼食呼出</button>
                 </div>
                 <div class="chip-group" id="l_mealTypeChips">
-                  <div class="chip-btn" data-val="家食" onclick="selectMealType('lunch', this)">🏠 家食</div>
-                  <div class="chip-btn selected-item" data-val="外食・中食" onclick="selectMealType('lunch', this)">🍽️ 外食・弁当</div>
+                  <div class="chip-btn selected-item" data-val="家食" onclick="selectMealType('lunch', this)">🏠 家食</div>
+                  <div class="chip-btn" data-val="外食・中食" onclick="selectMealType('lunch', this)">🍽️ 外食・弁当</div>
                   <div class="chip-btn" data-val="抜き" onclick="selectMealType('lunch', this)">🚫 抜き</div>
                 </div>
               </div>
@@ -793,7 +807,7 @@
                   </div>
                   <div class="chip-group" id="l_chips_soup"></div>
 
-                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・麻婆・卵・小鉢)</div>
+                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・焼き鳥・卵・小鉢)</div>
                   <div class="chip-group" id="l_chips_side"></div>
 
                   <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; margin-top:3px;">☕ 飲料</div>
@@ -863,7 +877,7 @@
                   </div>
                   <div class="chip-group" id="d_chips_soup"></div>
 
-                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・麻婆・卵・小鉢)</div>
+                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・焼き鳥・卵・小鉢)</div>
                   <div class="chip-group" id="d_chips_side"></div>
 
                   <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; margin-top:3px;">☕ 飲料</div>
@@ -962,7 +976,7 @@
             </div>
           </div>
 
-          <!-- 🛌 就寝前スロット（締めくくり ＆ 1行健康メモ新設） -->
+          <!-- 🛌 就寝前スロット -->
           <div class="card" id="slot-night">
             <div class="card-header has-bottom-border" onclick="toggleSlotCard('night')">
               <h2 class="card-title">🛌 就寝前の締めくくり</h2>
@@ -1025,13 +1039,12 @@
                 <input type="text" id="daily_weight" class="form-control smart-num-input" placeholder="68.2" data-label="就寝前体重(kg)" data-decimal="true" data-slot="night" oninput="autoSaveField('night')">
               </div>
 
-              <!-- 📝 新設：本日の体調・健康・食事補足メモ欄（画面圧迫を防ぐ1行固定設計・スマホ通常フリック入力） -->
               <div class="form-group" style="margin-top:6px;">
                 <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
                   <span>📝 本日の体調・健康特記 ＆ 食事補足メモ</span>
                   <span style="font-size:0.65rem; color:var(--accent-blue); font-weight:normal;">※診察レポート＆AIカルテ連動</span>
                 </label>
-                <input type="text" id="daily_memo" class="memo-single-line-input" placeholder="例: 午後から頭痛、熱37.2℃、風邪薬服用、ラーメンに煮卵追加など" oninput="autoSaveField('night')">
+                <input type="text" id="daily_memo" class="memo-single-line-input" placeholder="例: 午後から頭痛、熱37.2℃、風邪薬服用、焼き鳥はレバー追加など" oninput="autoSaveField('night')">
               </div>
 
               <button class="btn btn-save" onclick="saveSlot('night')">🌙 本日の全記録を完了して就寝する</button>
@@ -1057,7 +1070,6 @@
             </div>
           </div>
 
-          <!-- 💡 専門家からの「健康に関する今日のひとことコメント」枠 -->
           <div class="assistant-card" id="side_today_tip_card">
             <div class="assistant-card-header">
               <span>💡 本日の健康ひとこと (日替わり専門家コラム)</span>
@@ -1072,7 +1084,6 @@
             </div>
           </div>
 
-          <!-- リアルタイム見守り -->
           <div class="assistant-card">
             <div class="assistant-card-header">
               <span>🩺 専任バディのリアルタイム見守り</span>
@@ -1090,7 +1101,6 @@
             </div>
           </div>
 
-          <!-- 💡 お悩み解決・セルフケア早見表（仕事中の10秒カンペ） -->
           <div class="assistant-card">
             <div class="assistant-card-header" style="cursor:pointer;" onclick="toggleSection('sideFaqWrap')">
               <span>💡 お悩み解決＆セルフケア早見表</span>
@@ -1224,7 +1234,6 @@
         <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           <button class="btn btn-save" style="width:auto; margin-top:0;" onclick="enableDesktopNotification()">🔔 通知を有効化する（許可）</button>
           <button class="btn btn-outline" style="font-size:0.72rem;" onclick="testDesktopNotification()">🔔 稼働状態チェック（自己診断）</button>
-          <!-- PC大画面ビューワーへのアクセスは設定画面から常時可能 -->
           <a href="viewer.html" target="health_kun_pc_viewer" class="btn btn-outline" style="font-size:0.72rem; text-decoration:none; color:var(--accent-blue); border-color:var(--accent-blue);">🖥️ PC大画面ビューワーを開く</a>
         </div>
       </div>
@@ -1518,13 +1527,13 @@
             <div class="char-name">管理栄養士 アヤ（Aya）</div>
             <div class="char-role">臨床病態栄養指導士 / 食習慣コーチ</div>
             <div class="char-desc">
-              「ラーメンやステーキ、ハンバーグやお酒も大切な楽しみです！卵料理（生卵・ゆで卵・卵焼き）の量も半量・1個・2個から選べるようになりました。ぴったりな品がない時もメモ欄に補足を書いていただければしっかり拾います！」
+              「ラーメンやステーキ、ハンバーグやお酒も大切な楽しみです！卵料理（生卵・ゆで卵）に加え、焼き鳥（もも・レバー・ささみ・皮）や果物、ヨーグルトも選択できるようになりました。ぴったりな品がない時もメモ欄に補足を書いていただければしっかり拾います！」
             </div>
           </div>
         </div>
       </section>
 
-      <!-- 💡 デスクワーク疲労＆表情筋リカバリー・クリニック（軽量SVG図解付） -->
+      <!-- 🧘‍♂️ デスクワーク疲労＆表情筋リカバリー・クリニック -->
       <section class="guide-section" style="border-color: var(--accent-blue);">
         <h2 class="guide-title" style="color: var(--accent-blue);">
           <span>🧘‍♂️ （５）デスクワーク疲労 ＆ 表情筋リカバリー・クリニック</span>
@@ -1542,16 +1551,12 @@
           <div class="guide-illust-wrap">
             <div class="guide-svg-box">
               <svg class="guide-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <!-- 椅子 -->
                 <path d="M45,55 L45,85 M70,55 L70,85 M45,55 L75,55 M75,25 L75,55" stroke="#475569" stroke-width="3" stroke-linecap="round" fill="none"/>
-                <!-- 人物（骨盤まっすぐ座り） -->
                 <circle cx="58" cy="22" r="7" fill="#38bdf8"/>
                 <path d="M58,29 L58,55 L40,55 L40,82" stroke="#38bdf8" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                <!-- タオルロール（腰のS字） -->
                 <ellipse cx="68" cy="46" rx="4" ry="6" fill="#fbbf24"/>
                 <text x="68" y="49" font-size="6" font-weight="bold" fill="#080c16" text-anchor="middle">巻</text>
-                <!-- 坐骨矢印 -->
-                <path d="M58,58 L58,68" stroke="#34d399" stroke-width="2" marker-end="url(#arrow)" fill="none"/>
+                <path d="M58,58 L58,68" stroke="#34d399" stroke-width="2" fill="none"/>
               </svg>
               <div style="font-size:0.65rem; color:var(--accent-amber); font-weight:800; margin-top:2px;">坐骨2点で座る</div>
             </div>
@@ -1577,12 +1582,9 @@
           <div class="guide-illust-wrap">
             <div class="guide-svg-box">
               <svg class="guide-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <!-- 後頭部と首 -->
                 <path d="M30,75 C30,45 35,20 50,20 C65,20 70,45 70,75 Z" fill="none" stroke="#38bdf8" stroke-width="3"/>
-                <!-- 首の付け根（天柱ツボ） -->
                 <circle cx="42" cy="62" r="4" fill="#fb7185"/>
                 <circle cx="58" cy="62" r="4" fill="#fb7185"/>
-                <!-- 斜め上への親指押し矢印 -->
                 <path d="M42,72 L42,65" stroke="#fb7185" stroke-width="2.5" stroke-linecap="round"/>
                 <path d="M58,72 L58,65" stroke="#fb7185" stroke-width="2.5" stroke-linecap="round"/>
                 <text x="50" y="88" font-size="7" font-weight="bold" fill="#fb7185" text-anchor="middle">斜め上へ押す</text>
@@ -1611,17 +1613,13 @@
           <div class="guide-illust-wrap">
             <div class="guide-svg-box">
               <svg class="guide-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                <!-- 顔の輪郭 -->
                 <ellipse cx="50" cy="50" rx="30" ry="36" fill="none" stroke="#c084fc" stroke-width="2.5"/>
-                <!-- 眉間リリースポイント -->
                 <circle cx="50" cy="36" r="3" fill="#fbbf24"/>
                 <path d="M47,36 L53,36" stroke="#fbbf24" stroke-width="1.5"/>
-                <!-- 目と下まぶた引き上げ矢印 -->
                 <path d="M35,42 Q40,40 45,42" stroke="#38bdf8" stroke-width="2" fill="none"/>
                 <path d="M55,42 Q60,40 65,42" stroke="#38bdf8" stroke-width="2" fill="none"/>
                 <path d="M40,48 L40,44" stroke="#34d399" stroke-width="1.5"/>
                 <path d="M60,48 L60,44" stroke="#34d399" stroke-width="1.5"/>
-                <!-- 舌回しの円軌道 -->
                 <circle cx="50" cy="66" r="10" fill="none" stroke="#fb7185" stroke-dasharray="3,2" stroke-width="1.5"/>
                 <path d="M58,66 L62,64" stroke="#fb7185" stroke-width="1.5"/>
               </svg>
@@ -1682,7 +1680,6 @@
     <button class="btn-numpad-close" onclick="closeSmartNumpad()">✕ 閉じる</button>
   </div>
   
-  <!-- 1行目: 1から0までの数字キー -->
   <div class="numpad-grid-row1">
     <button class="num-key" onclick="pressNumKey('1')">1</button>
     <button class="num-key" onclick="pressNumKey('2')">2</button>
@@ -1696,7 +1693,6 @@
     <button class="num-key" onclick="pressNumKey('0')">0</button>
   </div>
 
-  <!-- 2行目: 機能キー（. / ⌫ / クリア / 次へ） -->
   <div class="numpad-grid-row2">
     <button class="num-key key-fn" id="btnNumDot" onclick="pressNumKey('.')">.</button>
     <button class="num-key key-fn" onclick="pressNumBack()">⌫</button>
@@ -1716,7 +1712,7 @@
   </div>
 </div>
 
-<!-- 分割された外部JSロジック読み込み -->
+<!-- 外部JSロジック読み込み -->
 <script src="app.js"></script>
 </body>
 </html>
