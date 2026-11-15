@@ -1,4 +1,4 @@
-<!-- [稼働Ver 作業版 Rev.3] 日次特記メモ連携（A4レポート印字＆Gemini臨床カンファレンス・ルールベース診断統合）・卵6種PFC完全対応 -->
+<!-- [稼働Ver 作業版 Rev.4] v1.4.3同期・焼き鳥部位6種/果物/ヨーグルト/サラダチキンPFC完全対応・コーヒー/サブメニュー名統一 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -123,9 +123,7 @@
     }
     .form-select:focus, .form-input:focus { border-color: var(--accent-blue); }
 
-    /* =========================================================
-       TAB 1: 食品・PFC栄養素認識辞書テーブル
-       ========================================================= */
+    /* TAB 1: 食品・PFC栄養素認識辞書テーブル */
     .table-scroll { max-height: 680px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
     .dict-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; text-align: left; }
     .dict-table th {
@@ -153,9 +151,7 @@
       padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; color: var(--accent-amber);
     }
 
-    /* =========================================================
-       TAB 2: Gemini API AIカンファレンス & 臨床コラム
-       ========================================================= */
+    /* TAB 2: Gemini API AIカンファレンス */
     .ai-conference-card {
       background: linear-gradient(135deg, #111a2f, #15223c);
       border: 1px solid var(--accent-blue); border-radius: var(--radius);
@@ -172,9 +168,7 @@
     .conf-doc { border-left: 3px solid var(--accent-blue); padding-left: 10px; margin-bottom: 12px; }
     .conf-nut { border-left: 3px solid var(--accent-green); padding-left: 10px; }
 
-    /* =========================================================
-       TAB 3: 医師提出用 A4クリニック・レポート
-       ========================================================= */
+    /* TAB 3: 医師提出用 A4クリニック・レポート */
     .report-preview-wrap {
       background: #ffffff; color: #1e293b; border-radius: 8px;
       padding: 24px 30px; max-width: 980px; margin: 0 auto;
@@ -259,7 +253,7 @@
 <main>
 
   <!-- =========================================================
-       TAB 1: 食品・PFC栄養素認識辞書（卵6種＆全品マスタ）
+       TAB 1: 食品・PFC栄養素認識辞書（焼き鳥部位/果物/ヨーグルト/サラダチキン/全品マスタ）
        ========================================================= -->
   <section id="dictTab" class="tab-content active">
     
@@ -279,7 +273,7 @@
 
       <div class="filter-group">
         <span class="filter-label">キーワード検索:</span>
-        <input type="text" id="dictSearchInput" class="form-input" placeholder="例: 卵、生卵、ステーキ、寿司、丼、豆乳" oninput="renderDictTable()">
+        <input type="text" id="dictSearchInput" class="form-input" placeholder="例: 焼き鳥、バナナ、卵、コーヒー、ヨーグルト" oninput="renderDictTable()">
       </div>
 
       <div style="font-size:0.75rem; color:var(--text-muted);">
@@ -433,7 +427,7 @@
 
 
   <!-- =========================================================
-       TAB 3: 医師提出用 A4クリニック・レポート（印刷最適化・特記メモ印字）
+       TAB 3: 医師提出用 A4クリニック・レポート
        ========================================================= -->
   <section id="reportTab" class="tab-content">
     
@@ -449,7 +443,6 @@
       <button class="btn btn-blue" onclick="window.print()">🖨️ A4印刷 / PDF保存</button>
     </div>
 
-    <!-- A4印刷プレビュー枠 -->
     <div class="report-preview-wrap" id="printableReportArea">
       
       <div class="rep-header">
@@ -463,7 +456,6 @@
         </div>
       </div>
 
-      <!-- 患者サマリー -->
       <div class="rep-profile-grid">
         <div class="rep-prof-item">年代/性別: <b id="repAgeGender">50代 男性</b></div>
         <div class="rep-prof-item">身長/直近体重: <b id="repHeightWeight">172.0 cm / 68.0 kg</b></div>
@@ -471,7 +463,6 @@
         <div class="rep-prof-item">重点管理: <b id="repCares">高血圧, 脂質異常症</b></div>
       </div>
 
-      <!-- 統計テーブル -->
       <table class="rep-summary-table">
         <thead>
           <tr>
@@ -528,18 +519,15 @@
         </tbody>
       </table>
 
-      <!-- 医師向け臨床所見枠 -->
       <div class="rep-eval-box" id="repClinicalEvaluationText">
         <b>【循環器内科 臨床評価サマリー】:</b> 集計中です...
       </div>
 
-      <!-- レポート内グラフ (血圧推移) -->
       <div style="font-size:9pt; font-weight:bold; color:#0f172a; margin-bottom:4px;">■ 家庭血圧推移トレンド（朝・就寝前・至適基準線）</div>
       <div class="rep-chart-wrap">
         <canvas id="reportPrintChart"></canvas>
       </div>
 
-      <!-- 日次記録一覧カルテ表（特記・体調メモ列連動） -->
       <div style="font-size:9pt; font-weight:bold; color:#0f172a; margin-top:10px; margin-bottom:4px;">■ 日別 測定・生活習慣記録一覧（カルテ転記用）</div>
       <table class="rep-daily-table">
         <thead>
@@ -566,7 +554,7 @@
 </main>
 
 <script>
-// [稼働Ver 作業版 Rev.3] PC Viewer ロジック実装
+// [稼働Ver 作業版 Rev.4] PC Viewer ロジック実装
 
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
 const MASTER_KEY_SETTINGS = 'health_kun_data_master_settings';
@@ -575,7 +563,7 @@ const MASTER_KEY_MEDS = 'health_kun_data_master_meds';
 const MASTER_KEY_PROFILE = 'health_kun_data_master_profile';
 const MASTER_KEY_GEMINI_KEY = 'health_kun_gemini_api_key';
 
-// 文部科学省「日本食品標準成分表（八訂）」に基づくPFC・ポーション完全辞書（卵6大メニューを網羅）
+// 文部科学省「日本食品標準成分表（八訂）」に基づくPFC・ポーション完全辞書（焼き鳥部位/果物/ヨーグルト/サラダチキン網羅）
 const COMPREHENSIVE_FOOD_DICT = [
   // 🍚 主食
   { cat: "主食", name: "ご飯・白米", portion: "お茶碗1杯 (約150g)", levels: "少:100g / 普:150g / 多:250g(大盛)", cal: 240, salt: 0.0, p: 3.8, f: 0.5, c: 55.7, memo: "精白米。糖質中心。玄米への置換でビタミンB群強化可" },
@@ -593,7 +581,7 @@ const COMPREHENSIVE_FOOD_DICT = [
   { cat: "主食", name: "うな丼", portion: "うなぎ半身〜1尾＋タレご飯", levels: "少:うな小丼 / 普:並(半身) / 多:上/特上(1尾)", cal: 750, salt: 2.2, p: 28.0, f: 24.0, c: 98.0, memo: "ビタミンA・DHA・EPA豊富。疲労回復効果高" },
   { cat: "主食", name: "チャーハン・炒飯", portion: "並盛 1人前 (約300g)", levels: "少:半炒飯 / 普:並盛(1人前) / 多:大盛り", cal: 580, salt: 2.5, p: 14.0, f: 18.0, c: 86.0, memo: "【サブタイプあり】五目炒飯(620kcal) / キムチ炒飯(640kcal)" },
   { cat: "主食", name: "カレーライス", portion: "定番ポーク/チキン 1皿", levels: "少:小盛 / 普:並盛(1皿) / 多:大盛/カツカレー", cal: 680, salt: 2.8, p: 16.0, f: 20.0, c: 105.0, memo: "【サブタイプあり】濃厚ビーフ(750kcal) / カツカレー(950kcal)" },
-  { cat: "主食", name: "寿司・にぎり/巻物", portion: "並・盛り合わせ 8〜10貫", levels: "少:5〜6貫 / 普:8〜10貫(並) / 多:12〜14貫", cal: 550, salt: 2.2, p: 24.0, f: 6.0, c: 98.0, memo: "【サブタイプあり】上特上/赤身中心/回転寿司/助六。酢飯糖質に留意" },
+  { cat: "主食", name: "寿司・にぎり/巻物", portion: "並・盛り合わせ 8〜10貫", levels: "少:5〜6貫 / 普:8〜10貫(並) / 多:12〜14貫", cal: 550, salt: 2.2, p: 24.0, f: 6.0, c: 98.0, memo: "【サブタイプあり】上特上/赤身・白身/回転寿司/助六。酢飯糖質に留意" },
   { cat: "主食", name: "すき焼き丼", portion: "並盛 1杯 (牛肉・豆腐・玉ねぎ)", levels: "少:小盛 / 普:並盛 / 多:大盛", cal: 750, salt: 2.8, p: 22.0, f: 22.0, c: 108.0, memo: "割り下による糖質・塩分を含む。卵でタンパク質強化" },
   { cat: "主食", name: "チャーシュー丼", portion: "並盛 1杯 (煮豚・タレ)", levels: "少:ミニ丼 / 普:並盛 / 多:肉増し大盛", cal: 680, salt: 2.6, p: 24.0, f: 22.0, c: 92.0, memo: "豚バラ肉の動物性脂質。ラーメンセット時は半量推奨" },
 
@@ -609,15 +597,28 @@ const COMPREHENSIVE_FOOD_DICT = [
   { cat: "おかず", name: "焼き魚・煮魚", portion: "切り身 1切 (約80〜100g)", levels: "少:小さめ切身 / 普:1切(約90g) / 多:大ぶり/2切", cal: 160, salt: 1.1, p: 19.5, f: 8.5, c: 0.8, memo: "鮭/サバ/ホッケ。オメガ3（EPA・DHA）が血管内皮を修復" },
   { cat: "おかず", name: "刺身・生魚", portion: "盛り合わせ (約5〜6切・100g)", levels: "少:3切 / 普:1人前(5〜6切) / 多:舟盛り/多め", cal: 130, salt: 0.6, p: 22.0, f: 4.5, c: 0.2, memo: "【サブタイプあり】赤身(100kcal)/白身(90kcal)/青魚(150kcal)/トロ(180kcal)" },
   { cat: "おかず", name: "鶏唐揚げ・チキン", portion: "標準サイズ 3個 (約90g)", levels: "少:1〜2個 / 普:3個 / 多:5個以上", cal: 280, salt: 1.0, p: 16.5, f: 18.0, c: 11.0, memo: "良質な動物性タンパク質。揚げ油の酸化に配慮" },
+  
+  // 🍢 焼き鳥・串焼き（部位別サブタイプ対応）
+  { cat: "おかず", name: "焼き鳥・串焼き", portion: "串焼き 2本 (約80g)", levels: "少:1本 / 普:2本 / 多:4本", cal: 160, salt: 1.2, p: 18.0, f: 8.5, c: 1.2, memo: "【サブタイプあり】もも(塩/タレ)/ささみ(120kcal)/レバー(110kcal)/皮(300kcal)" },
+  { cat: "おかず", name: "もも・ねぎま (塩)", portion: "串焼き 2本 (約80g)", levels: "少:1本 / 普:2本 / 多:4本", cal: 160, salt: 1.2, p: 18.0, f: 8.5, c: 0.5, memo: "良質な動物性タンパク質。塩味で糖質オフ" },
+  { cat: "おかず", name: "もも・ねぎま (タレ)", portion: "串焼き 2本 (約80g)", levels: "少:1本 / 普:2本 / 多:4本", cal: 180, salt: 1.6, p: 17.5, f: 8.5, c: 6.0, memo: "タレの糖分と塩分が加算" },
+  { cat: "おかず", name: "ささみ・むね", portion: "串焼き 2本 (約80g)", levels: "少:1本 / 普:2本 / 多:4本", cal: 120, salt: 1.2, p: 22.0, f: 1.5, c: 0.2, memo: "超低脂質・高タンパク。脂質異常症に最適" },
+  { cat: "おかず", name: "レバー (鉄分)", portion: "串焼き 2本 (約80g)", levels: "少:1本 / 普:2本 / 多:4本", cal: 110, salt: 1.2, p: 19.0, f: 2.5, c: 1.5, memo: "高鉄分・ビタミンAの宝庫。貧血予防" },
+  { cat: "おかず", name: "皮・かわ (脂多)", portion: "串焼き 2本 (約80g)", levels: "少:1本 / 普:2本 / 多:4本", cal: 300, salt: 1.2, p: 10.0, f: 28.0, c: 0.0, memo: "動物性脂質・飽和脂肪酸が高いため頻度に配慮" },
+  { cat: "おかず", name: "盛り合わせ (3本)", portion: "串焼き 3本盛り", levels: "少:2本 / 普:3本 / 多:5本", cal: 240, salt: 1.8, p: 24.0, f: 13.0, c: 3.0, memo: "定番部位の盛り合わせ" },
+
+  // 🍗 サラダチキン
+  { cat: "おかず", name: "サラダチキン・蒸し鶏", portion: "個包装 1パック (約110g)", levels: "少:半量 / 普:1パック / 多:大盛", cal: 115, salt: 1.0, p: 24.0, f: 1.5, c: 0.5, memo: "超高タンパク・低糖質・低脂質。筋肉維持の代表食材" },
+
   { cat: "おかず", name: "とんかつ・カツ類", portion: "ロースかつ 1枚 (約120g)", levels: "少:ハーフ(60g) / 普:1枚(120g) / 多:大判1枚(180g)", cal: 450, salt: 1.2, p: 21.0, f: 32.0, c: 16.0, memo: "【サブタイプあり】ヒレかつ(340kcal/脂質低め)" },
   { cat: "おかず", name: "豚生姜焼き・野菜炒め", portion: "豚ロース3枚＋玉ねぎキャベツ", levels: "少:肉2枚 / 普:並盛1皿 / 多:肉大盛", cal: 260, salt: 1.2, p: 17.5, f: 16.0, c: 9.5, memo: "ビタミンB1豊富（糖質代謝促進・疲労回復）" },
   { cat: "おかず", name: "ハンバーグ", portion: "デミグラス 1個 (約150g)", levels: "少:小(100g) / 普:標準(150g) / 多:大(250g)", cal: 380, salt: 1.6, p: 19.0, f: 24.0, c: 18.0, memo: "【サブタイプあり】チーズイン(460kcal)。脂質高め" },
-  { cat: "おかず", name: "牛ステーキ", portion: "赤身肉 1枚 (約180g)", levels: "少:120g / 普:200g(標準1枚) / 多:350g(大盛)", cal: 360, salt: 1.0, p: 35.0, f: 22.0, c: 1.0, memo: "【サブタイプあり】サーモン/リブロース(680kcal/高脂質)" },
+  { cat: "おかず", name: "牛ステーキ", portion: "赤身肉 1枚 (約180g)", levels: "少:120g / 普:200g(標準1枚) / 多:350g(大盛)", cal: 360, salt: 1.0, p: 35.0, f: 22.0, c: 1.0, memo: "【サブタイプあり】サーロイン/リブロース(680kcal/高脂質)" },
   { cat: "おかず", name: "牛焼肉・カルビ/ロース", portion: "ロース・赤身肉中心 1人前(100g)", levels: "少:ハーフ / 普:1人前(100g) / 多:肉増し(180g)", cal: 240, salt: 1.0, p: 20.0, f: 16.0, c: 3.0, memo: "【サブタイプあり】カルビ・脂身多め(380kcal)" },
   { cat: "おかず", name: "ホルモン焼き・レバー炒め", portion: "ニラレバ/ホルモン 1皿", levels: "少:小鉢 / 普:1皿 / 多:大盛り", cal: 250, salt: 1.2, p: 18.0, f: 16.0, c: 6.5, memo: "【サブタイプあり】レバー(高鉄分・140kcal) / ホルモン(280kcal)" },
 
-  // 🥚 卵6大メニュー（完全網羅）
-  { cat: "おかず", name: "卵・たまご料理", portion: "生卵 1個 (約60g)", levels: "少:半量 / 普:1個(標準) / 多:2個", cal: 76, salt: 0.2, p: 6.5, f: 5.4, c: 0.2, memo: "【サブタイプあり】生卵(76kcal)/半熟(76kcal)/ゆで卵(76kcal)/目玉焼き(95kcal)/卵焼き(110kcal)/スクランブル(120kcal)" },
+  // 🥚 卵6大メニュー
+  { cat: "おかず", name: "卵・たまご料理", portion: "生卵 1個 (約60g)", levels: "少:半量 / 普:1個(標準) / 多:2個", cal: 76, salt: 0.2, p: 6.5, f: 5.4, c: 0.2, memo: "【サブタイプあり】生卵/半熟/ゆで卵(各76kcal)/目玉焼き(95kcal)/卵焼き(110kcal)/スクランブル(120kcal)" },
   { cat: "おかず", name: "生卵", portion: "鶏卵 1個分 (約60g)", levels: "少:半量 / 普:1個 / 多:2個", cal: 76, salt: 0.2, p: 6.5, f: 5.4, c: 0.2, memo: "アミノ酸スコア100。油不使用で朝食に最適" },
   { cat: "おかず", name: "ゆで卵", portion: "固ゆで卵 1個分 (約60g)", levels: "少:半量 / 普:1個 / 多:2個", cal: 76, salt: 0.2, p: 6.5, f: 5.4, c: 0.2, memo: "油不使用。腹持ち良好・作り置きに便利" },
   { cat: "おかず", name: "半熟卵・温泉卵", portion: "温泉卵 1個分 (約60g)", levels: "少:半量 / 普:1個 / 多:2個", cal: 76, salt: 0.2, p: 6.5, f: 5.4, c: 0.2, memo: "最も消化吸収率が高い。胃腸に優しい完全栄養食" },
@@ -637,16 +638,25 @@ const COMPREHENSIVE_FOOD_DICT = [
   { cat: "おかず", name: "ポテト・マカロニサラダ", portion: "小鉢1盛 (約70g)", levels: "少:一口 / 普:1盛 / 多:大盛り", cal: 140, salt: 0.6, p: 2.0, f: 8.5, c: 13.5, memo: "マヨネーズ由来の脂質を含むため主食扱いに近い" },
   { cat: "おかず", name: "漬物・キムチ", portion: "小皿1盛 (約30g)", levels: "少:一口 / 普:1盛 / 多:多め", cal: 20, salt: 1.0, p: 1.0, f: 0.2, c: 3.5, memo: "植物性乳酸菌（プロバイオティクス）。塩分注意" },
   { cat: "おかず", name: "惣菜揚げ物(コロッケ等)", portion: "コロッケ 1個 (約80g)", levels: "少:ハーフ / 普:1個 / 多:2個以上", cal: 200, salt: 0.8, p: 3.5, f: 11.0, c: 21.0, memo: "糖質＋脂質の組み合わせ。夕食時は控えめ推奨" },
+  
+  // 🥣 ヨーグルト
+  { cat: "おかず", name: "ヨーグルト", portion: "小カップ 1個 (約100g)", levels: "少:半量 / 普:1カップ / 多:2個", cal: 65, salt: 0.1, p: 3.6, f: 3.0, c: 5.5, memo: "乳酸菌で腸内細菌叢改善。カルシウム豊富で血圧安定" },
+
   { cat: "おかず", name: "その他・残り物惣菜", portion: "家庭の小鉢 1品", levels: "少:一口 / 普:1品 / 多:大盛り", cal: 150, salt: 0.8, p: 6.0, f: 7.0, c: 14.0, memo: "一般的な家庭料理の平均マクロ栄養素を適用" },
 
-  // ☕ 飲料
-  { cat: "飲料", name: "コーヒー", portion: "ブラック 1杯 (約150ml)", levels: "少:半杯 / 普:1杯 / 多:大マグ", cal: 5, salt: 0.0, p: 0.3, f: 0.0, c: 0.9, memo: "【サブタイプあり】豆乳入り(50kcal) / アーモンドミルク(25kcal) / ミルク(45kcal)" },
+  // ☕ 飲料（短縮名に完全準拠）
+  { cat: "飲料", name: "コーヒー", portion: "ブラック 1杯 (約150ml)", levels: "少:半杯 / 普:1杯 / 多:大マグ", cal: 5, salt: 0.0, p: 0.3, f: 0.0, c: 0.9, memo: "【サブタイプあり】ミルク入り(45kcal) / 豆乳入り(50kcal) / アーモンド入り(25kcal) / ココア入り(75kcal)" },
+  { cat: "飲料", name: "豆乳入り", portion: "ソイラテ 1杯 (約150ml)", levels: "少:半杯 / 普:1杯 / 多:大杯", cal: 50, salt: 0.1, p: 3.5, f: 2.5, c: 3.0, memo: "大豆イソフラボン・植物性タンパク質。カリウム含有" },
+  { cat: "飲料", name: "アーモンド入り", portion: "アーモンドラテ 1杯 (約150ml)", levels: "少:半杯 / 普:1杯 / 多:大杯", cal: 25, salt: 0.0, p: 0.8, f: 2.0, c: 1.0, memo: "ビタミンE（強力な抗酸化作用）・オレイン酸含有" },
+  { cat: "飲料", name: "ミルク入り", portion: "カフェオレ 1杯 (約150ml)", levels: "少:半杯 / 普:1杯 / 多:大杯", cal: 45, salt: 0.1, p: 2.5, f: 2.5, c: 3.5, memo: "牛乳由来のカルシウム・タンパク質" },
+  { cat: "飲料", name: "ココア入り", portion: "カフェモカ 1杯 (約150ml)", levels: "少:半杯 / 普:1杯 / 多:大杯", cal: 75, salt: 0.1, p: 2.0, f: 2.5, c: 11.0, memo: "カカオポリフェノール・糖質を含む" },
   { cat: "飲料", name: "ノンアルソーダ", portion: "グラス/缶 1本 (約350ml)", levels: "少:グラス半 / 普:1本 / 多:2本", cal: 15, salt: 0.0, p: 0.0, f: 0.0, c: 3.5, memo: "休肝日の代替飲料として交感神経の興奮を抑制" },
   { cat: "飲料", name: "ヤクルト", portion: "1本 (約65ml)", levels: "少:1本 / 普:1本 / 多:2本", cal: 50, salt: 0.0, p: 0.8, f: 0.1, c: 11.5, memo: "乳酸菌シロタ株。腸内環境・自律神経の調整" },
   { cat: "飲料", name: "野菜ジュース", portion: "紙パック 1本 (約200ml)", levels: "少:半杯 / 普:1本(200ml) / 多:2本", cal: 70, salt: 0.1, p: 1.5, f: 0.2, c: 15.5, memo: "カリウム高含有(約400〜600mg)。塩分排出に直結" },
   { cat: "飲料", name: "オロナミンC", portion: "1瓶 (約120ml)", levels: "少:1瓶 / 普:1瓶 / 多:2瓶", cal: 79, salt: 0.0, p: 0.0, f: 0.0, c: 19.0, memo: "ビタミンB2・B6・C含有。糖質中心" },
 
   // 🍪 間食
+  { cat: "間食", name: "果物・フルーツ(バナナ等)", portion: "バナナ1本 / りんご半分 (約100g)", levels: "少:一口 / 普:1本(100g) / 多:2本(200g)", cal: 80, salt: 0.0, p: 1.0, f: 0.2, c: 20.0, memo: "カリウム高含有(360mg)。ナトリウム排泄を直接促す降圧食材" },
   { cat: "間食", name: "チョコレート", portion: "個包装 2〜3枚 (約25g)", levels: "少:一口(1枚) / 普:2〜3枚 / 多:板チョコ半枚", cal: 140, salt: 0.0, p: 1.8, f: 9.0, c: 13.0, memo: "カカオポリフェノール（血管拡張・降圧作用）" },
   { cat: "間食", name: "スナック菓子", portion: "小袋 1袋 (約30g)", levels: "少:一口 / 普:小袋(30g) / 多:大袋半量", cal: 165, salt: 0.4, p: 1.5, f: 9.8, c: 17.5, memo: "油分と塩分が重なるため夕食の減塩で相殺推奨" },
   { cat: "間食", name: "和菓子・せんべい", portion: "大福1個 / せんべい2枚", levels: "少:半個 / 普:1個(2枚) / 多:2個以上", cal: 130, salt: 0.3, p: 2.2, f: 0.5, c: 29.0, memo: "洋菓子に比べ脂質が極めて低い（脂質異常症に有利）" },
@@ -769,9 +779,7 @@ function switchViewerTab(tabId) {
   }
 }
 
-// =========================================================
 // TAB 1: 食品辞書 レンダリング
-// =========================================================
 function renderDictTable() {
   const catFilter = document.getElementById('dictCatFilter').value;
   const search = document.getElementById('dictSearchInput').value.trim().toLowerCase();
@@ -811,9 +819,7 @@ function escapeHtml(str) {
   return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
-// =========================================================
 // TAB 2: 多角臨床ダッシュボード ロジック
-// =========================================================
 function getFilteredRecords(period) {
   const allDates = Object.keys(globalRecords).sort();
   if (allDates.length === 0) return [];
@@ -857,8 +863,12 @@ function calculatePFCForDay(rec) {
 
     let mult = 1.0;
     const isEgg = item.name.includes('卵');
+    const isYakitori = item.name.includes('焼き鳥');
+
     if (isEgg) {
       mult = item.amount === '少ない' ? 0.5 : (item.amount === '多い' ? 2.0 : 1.0);
+    } else if (isYakitori) {
+      mult = item.amount === '少ない' ? 0.5 : (item.amount === '多い' ? 1.75 : 1.0);
     } else if (item.amount === '少ない') {
       mult = 0.6;
     } else if (item.amount === '多い') {
@@ -899,7 +909,6 @@ function refreshAnalysis() {
   }
   rangeEl.textContent = `集計期間: ${list[0].date} 〜 ${list[list.length - 1].date} (${list.length}日分)`;
 
-  // 統計集計
   let sumSysM = 0, sumDiaM = 0, countM = 0;
   let sumSysN = 0, sumDiaN = 0, countN = 0;
   let sumPP = 0, countPP = 0;
@@ -918,7 +927,6 @@ function refreshAnalysis() {
   list.forEach(rec => {
     dates.push(rec.date.slice(5));
 
-    // 朝血圧
     const mSys = rec.morning?.bpSys || null;
     const mDia = rec.morning?.bpDia || null;
     mSysArr.push(mSys);
@@ -929,7 +937,6 @@ function refreshAnalysis() {
       sumPP += pp; countPP++;
     }
 
-    // 就寝前血圧
     const nSys = rec.night?.bpSys || null;
     const nDia = rec.night?.bpDia || null;
     nSysArr.push(nSys);
@@ -938,19 +945,16 @@ function refreshAnalysis() {
       sumSysN += nSys; sumDiaN += nDia; countN++;
     }
 
-    // モーニングサージ (朝 - 夜)
     if (mSys && nSys) {
       meDiffArr.push(mSys - nSys);
     } else {
       meDiffArr.push(null);
     }
 
-    // 体重・歩数・睡眠
     weights.push(rec.weight || null);
     steps.push(rec.steps || 0);
     sleepHours.push(rec.morning?.sleepHours ? parseFloat(rec.morning.sleepHours) : null);
 
-    // PFC
     const pfc = calculatePFCForDay(rec);
     sumSalt += pfc.salt; countSalt++;
     sumP += pfc.p; sumF += pfc.f; sumC += pfc.c;
@@ -958,7 +962,6 @@ function refreshAnalysis() {
     pList.push(pfc.p); fList.push(pfc.f); cList.push(pfc.c);
   });
 
-  // ハイライト数値の反映
   const avgMSys = countM > 0 ? Math.round(sumSysM / countM) : '--';
   const avgMDia = countM > 0 ? Math.round(sumDiaM / countM) : '--';
   document.getElementById('stat_m_bp').innerHTML = `${avgMSys} / ${avgMDia} <span class="stat-unit">mmHg</span>`;
@@ -975,18 +978,11 @@ function refreshAnalysis() {
 
   const avgSalt = countSalt > 0 ? (sumSalt / countSalt).toFixed(1) : '--';
   document.getElementById('stat_salt').innerHTML = `${avgSalt} <span class="stat-unit">g/日</span>`;
-  document.getElementById('stat_salt_sub').textContent = avgSalt <= 6.0 ? "学会目標(6.0g)クリア◎" : "野菜・豆乳でカリウム排泄を";
+  document.getElementById('stat_salt_sub').textContent = avgSalt <= 6.0 ? "学会目標(6.0g)クリア◎" : "果物・野菜・豆乳でカリウム排泄を";
 
-  // チャート描画 1: 朝晩血圧 ＆ モーニングサージ
   renderViewerBpChart(dates, mSysArr, mDiaArr, nSysArr, nDiaArr);
-
-  // チャート描画 2: PFC比率円グラフ ＆ 積み上げ
   renderViewerPfcCharts(dates, sumP, sumF, sumC, pList, fList, cList);
-
-  // チャート描画 3: 体重＆歩数
   renderViewerWeightStepsChart(dates, weights, steps);
-
-  // チャート描画 4: 睡眠vs翌朝血圧
   renderViewerSleepBpChart(dates, sleepHours, mSysArr);
 }
 
@@ -1034,11 +1030,10 @@ function renderViewerPfcCharts(labels, totalP, totalF, totalC, pArr, fArr, cArr)
     <div style="color:#fb7185;">● 脂質 (F): <b>${fRate}%</b> (平均 ${(totalF/labels.length).toFixed(1)}g /日) <small style="color:var(--text-muted);">理想20-30%</small></div>
     <div style="color:#fbbf24;">● 炭水化物 (C): <b>${cRate}%</b> (平均 ${(totalC/labels.length).toFixed(1)}g /日) <small style="color:var(--text-muted);">理想50-65%</small></div>
     <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px;">
-      ${fRate > 30 ? '⚠️ 脂質比率がやや高めです。揚げ物・脂身肉を魚や卵・豆類に置換すると理想域に近づきます。' : '✅ 脂質・タンパク質バランスは適正域をキープできています！'}
+      ${fRate > 30 ? '⚠️ 脂質比率がやや高めです。揚げ物を焼き鳥（ささみ・レバー）や魚、卵、豆腐・サラダチキンに置換すると理想域に近づきます。' : '✅ 脂質・タンパク質バランスは適正域をキープできています！'}
     </div>
   `;
 
-  // 円グラフ
   const ctxPie = document.getElementById('viewerPfcPieChart').getContext('2d');
   if (chartInstances.pfcPie) chartInstances.pfcPie.destroy();
 
@@ -1059,7 +1054,6 @@ function renderViewerPfcCharts(labels, totalP, totalF, totalC, pArr, fArr, cArr)
     }
   });
 
-  // 積み上げ推移
   const ctxStack = document.getElementById('viewerPfcStackChart').getContext('2d');
   if (chartInstances.pfcStack) chartInstances.pfcStack.destroy();
 
@@ -1134,9 +1128,7 @@ function renderViewerSleepBpChart(labels, sleepH, mSys) {
   });
 }
 
-// =========================================================
 // TAB 2: AI カンファレンス実行 (Gemini API 厳格固定連携・特記メモ統合＆出力途切れ防止)
-// =========================================================
 async function runAiConference() {
   const outputEl = document.getElementById('conferenceOutputArea');
   const btn = document.getElementById('btnRunAi');
@@ -1156,7 +1148,6 @@ async function runAiConference() {
     return;
   }
 
-  // 臨床サマリーデータ作成
   let sumSysM = 0, sumDiaM = 0, countM = 0;
   let sumSysN = 0, sumDiaN = 0, countN = 0;
   let sumSalt = 0, sumSteps = 0, sumSleep = 0;
@@ -1210,7 +1201,6 @@ async function runAiConference() {
 ${memoSectionText}
   `.trim();
 
-  // APIキーが存在する場合は gemini-3.5-flash-lite へリクエスト
   if (apiKey) {
     try {
       const response = await callGeminiApiWithFallback(apiKey, clinicalSummaryText);
@@ -1221,7 +1211,6 @@ ${memoSectionText}
         `<div style="font-size:0.7rem; color:var(--accent-amber); margin-top:8px;">※APIエラーのため高精度ルールベース診断に切り替えました (${err.message})</div>`;
     }
   } else {
-    // APIキーがない場合は精緻なルールベース臨床判定を即座に表示（メモも完全反映）
     outputEl.innerHTML = generateRuleBasedClinicalAdvice(avgSysM, avgDiaM, avgSysN, avgDiaN, avgSalt, pRate, fRate, cRate, avgSleep, avgSteps, memoList);
   }
 
@@ -1230,7 +1219,6 @@ ${memoSectionText}
 }
 
 // 厳格指定2モデル（gemini-3.5-flash-lite ➔ gemini-flash-lite-latest）によるフォールバックAPIコール
-// トークン上限を2048に拡張し、プロンプトで末尾完結を厳格指定して文章途切れを完全解消
 async function callGeminiApiWithFallback(apiKey, summaryData) {
   const prompt = `
 あなたは循環器内科専門医「Dr.ケン」と臨床病態管理栄養士「アヤ」です。
@@ -1249,8 +1237,8 @@ ${summaryData}
    - 専門医としての総合コメント
 2. 🥗 【管理栄養士 アヤ の栄養・食事処方】:
    - PFCバランス（特に脂質比率とタンパク質充足度）の評価
-   - 推定食塩摂取量（目標6.0g）に対する減塩・カリウム相殺アドバイス
-   - 次週からすぐに実行できる具体的食材・メニュー提案（卵料理や野菜等の活用、食事補足メモへのフィードバック）
+   - 推定食塩摂取量（目標6.0g）に対する減塩・カリウム相殺アドバイス（果物・バナナや野菜ジュース等の活用）
+   - 次週からすぐに実行できる具体的食材・メニュー提案（卵料理や焼き鳥ささみ・レバー、サラダチキン、ヨーグルト等の活用、食事補足メモへのフィードバック）
    - 栄養士としてのアドバイスの結び
   `.trim();
 
@@ -1299,7 +1287,6 @@ function generateRuleBasedClinicalAdvice(sysM, diaM, sysN, diaN, salt, pRate, fR
   const meDiff = (sysM && sysN) ? (sysM - sysN) : null;
   const pp = (sysM && diaM) ? (sysM - diaM) : null;
 
-  // メモ内のキーワード（頭痛、熱、風邪、だるい、痛み等）の臨床検出
   const memoTextAll = memoList.join(' ');
   const hasFeverOrHeadache = /熱|頭痛|風邪|体調不良|だる|痛|悪寒/.test(memoTextAll);
 
@@ -1335,22 +1322,20 @@ function generateRuleBasedClinicalAdvice(sysM, diaM, sysN, diaN, salt, pRate, fR
   if (salt <= 6.5) {
     nutHtml += `「つゆ残し」や「減塩味噌汁」の習慣が定着しており、非常に素晴らしい食塩コントロールです！<br>`;
   } else {
-    nutHtml += `目標をやや超過しています。外食時のラーメンや丼もののつゆを残し、「野菜ジュース」や「豆乳」を1品足してカリウムによるナトリウム排泄を促しましょう。<br>`;
+    nutHtml += `目標をやや超過しています。外食時のラーメンや丼もののつゆを残し、「果物・バナナ」や「野菜ジュース」「豆乳」を1品足してカリウムによるナトリウム排泄を促しましょう。<br>`;
   }
 
   nutHtml += `・<b>PFCバランス評価:</b> 蛋白 ${pRate}% / 脂質 ${fRate}% / 炭水化物 ${cRate}%。<br>`;
   if (fRate > 30) {
-    nutHtml += `脂質比率がやや高めです。お肉（カルビ・カツ等）の頻度を週2回、焼き魚（サバ・鮭）や刺身などの「オメガ3魚料理」や卵料理（生卵・ゆで卵）、豆腐料理に置き換えることで、脂質異常症を力強く予防できます。日々のバランスを保ちながら健康習慣を続けていきましょう！</div>`;
+    nutHtml += `脂質比率がやや高めです。お肉（カルビ・カツ等）の頻度を週2回、焼き魚（サバ・鮭）や焼き鳥（ささみ・レバー）、卵料理（生卵・ゆで卵）、サラダチキン、豆腐料理に置き換えることで、脂質異常症を力強く予防できます。日々のバランスを保ちながら健康習慣を続けていきましょう！</div>`;
   } else {
-    nutHtml += `理想的なマクロ栄養素比率を達成しています！この調子で良質なタンパク質（卵・魚・豆）と野菜小鉢を維持していきましょう。</div>`;
+    nutHtml += `理想的なマクロ栄養素比率を達成しています！この調子で良質なタンパク質（卵・魚・焼き鳥・豆）と野菜小鉢・果物を維持していきましょう。</div>`;
   }
 
   return docHtml + nutHtml;
 }
 
-// =========================================================
 // TAB 3: 医師提出用 A4クリニック・レポート 生成ロジック
-// =========================================================
 function generateDoctorReport() {
   const period = document.getElementById('reportPeriodSelect').value;
   const list = getFilteredRecords(period);
@@ -1366,7 +1351,6 @@ function generateDoctorReport() {
 
   document.getElementById('repPeriodRange').textContent = `${list[0].date} 〜 ${list[list.length - 1].date} (${list.length}日間)`;
 
-  // プロファイル
   document.getElementById('repAgeGender').textContent = `${globalProfile.age || '50代'} ${globalProfile.gender || '男性'}`;
   const h = globalProfile.height || 172;
   const lastWeight = list[list.length - 1].weight || 68.0;
@@ -1378,7 +1362,6 @@ function generateDoctorReport() {
   document.getElementById('repBmiStd').textContent = `${bmi} (適正 ${stdW}kg)`;
   document.getElementById('repCares').textContent = (globalProfile.cares || ['高血圧', '脂質異常症']).join(', ');
 
-  // 統計集計
   let sumSysM = 0, sumDiaM = 0, countM = 0, maxSysM = -1, minSysM = 999;
   let sumSysN = 0, sumDiaN = 0, countN = 0, maxSysN = -1, minSysN = 999;
   let sumPP = 0, countPP = 0, maxPP = -1, minPP = 999;
@@ -1433,20 +1416,17 @@ function generateDoctorReport() {
       countSleep++;
     }
 
-    // 服薬
     const allMeds = [...(r.morning?.meds || []), ...(r.lunch?.meds || []), ...(r.dinner?.meds || []), ...(r.night?.meds || [])];
     if (globalMeds.length > 0) {
       totalMedOpportunities += 1;
       if (allMeds.length > 0) takenMeds += 1;
     }
 
-    // PFC・塩分
     const pfc = calculatePFCForDay(r);
     sumSalt += pfc.salt; countSalt++;
     if (pfc.salt > maxSalt) maxSalt = pfc.salt;
     if (pfc.salt < minSalt) minSalt = pfc.salt;
 
-    // 食事サマリー文字列作成
     const foodItems = [
       ...(r.morning?.items || []),
       ...(r.lunch?.items || []),
@@ -1460,12 +1440,10 @@ function generateDoctorReport() {
       memoStr += ` (休肝日◎)`;
     }
 
-    // 📝 日次特記・体調メモの印字追加
     if (r.memo && r.memo.trim()) {
       memoStr += ` 【特記】${r.memo.trim()}`;
     }
 
-    // テーブル行
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${r.date}</td>
@@ -1482,7 +1460,6 @@ function generateDoctorReport() {
     tbody.appendChild(tr);
   });
 
-  // サマリー値の挿入
   const avgMSys = countM > 0 ? Math.round(sumSysM / countM) : '--';
   const avgMDia = countM > 0 ? Math.round(sumDiaM / countM) : '--';
   document.getElementById('rep_avg_m_bp').textContent = `${avgMSys} / ${avgMDia}`;
@@ -1514,7 +1491,6 @@ function generateDoctorReport() {
   document.getElementById('rep_avg_steps').textContent = `${avgSteps}`;
   document.getElementById('rep_avg_sleep').textContent = `${avgSleep}`;
 
-  // 臨床評価コメント
   let evalMsg = `<b>【JSH2019ガイドライン基準 臨床所見】:</b> `;
   if (avgMSys < 125 && avgMDia < 75) {
     evalMsg += `家庭血圧基準（125/75未満）を期間全体で安定して維持できています。服薬遵守率は${medAdherence}%と良好で、推定食塩摂取量も平均${avgSalt}g/日と抑制傾向です。現在の治療方針・生活習慣療法の継続を推奨します。`;
@@ -1523,7 +1499,6 @@ function generateDoctorReport() {
   }
   document.getElementById('repClinicalEvaluationText').innerHTML = evalMsg;
 
-  // レポート用グラフ描画 (印刷用白背景最適化)
   renderReportPrintChart(dates, repMSys, repNSys);
 }
 
