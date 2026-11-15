@@ -1,4 +1,4 @@
-// [稼働Ver 作業版 Rev.16] 卵の量ラベル修正(半量/1個/2個)・日次特記メモ保存＆読み込み連動
+// [稼働Ver 作業版 Rev.17] v1.4.3更新・コーヒー短縮(ブラック/ミルク/豆乳/アーモンド/ココア)・焼き鳥部位6種/果物/ヨーグルト/サラダチキン追加・昼食家食デフォルト統一・自動マイグレーション
 
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
 const MASTER_KEY_SETTINGS = 'health_kun_data_master_settings';
@@ -130,7 +130,7 @@ const HEALTH_TIPS_LIBRARY = [
   }
 ];
 
-// サブタイプ定義（卵6大メニューを新設・完全網羅）
+// サブタイプ定義（コーヒー短縮・焼き鳥部位6種・スマホ表示最適化）
 const SUBTYPES_DEF = {
   "卵・たまご料理": [
     { name: "生卵", cal: 76, salt: 0.2 },
@@ -151,9 +151,17 @@ const SUBTYPES_DEF = {
   "コーヒー": [
     { name: "ブラック", cal: 5, salt: 0.0 },
     { name: "ミルク入り", cal: 45, salt: 0.1 },
-    { name: "豆乳入り (ソイラテ)", cal: 50, salt: 0.1 },
-    { name: "アーモンドミルク入り (抗酸化)", cal: 25, salt: 0.0 },
+    { name: "豆乳入り", cal: 50, salt: 0.1 },
+    { name: "アーモンド入り", cal: 25, salt: 0.0 },
     { name: "ココア入り", cal: 75, salt: 0.1 }
+  ],
+  "焼き鳥・串焼き": [
+    { name: "もも・ねぎま (塩)", cal: 160, salt: 1.2 },
+    { name: "もも・ねぎま (タレ)", cal: 180, salt: 1.6 },
+    { name: "ささみ・むね", cal: 120, salt: 1.2 },
+    { name: "レバー (鉄分)", cal: 110, salt: 1.2 },
+    { name: "皮・かわ (脂多)", cal: 300, salt: 1.2 },
+    { name: "盛り合わせ (3本)", cal: 240, salt: 1.8 }
   ],
   "刺身・生魚": [
     { name: "盛り合わせ (標準1人前)", cal: 130, salt: 0.6 },
@@ -165,9 +173,9 @@ const SUBTYPES_DEF = {
   "寿司・にぎり/巻物": [
     { name: "並・盛り合わせ (8〜10貫)", cal: 550, salt: 2.2 },
     { name: "上・特上 (中トロ等 8〜10貫)", cal: 650, salt: 2.0 },
-    { name: "赤身・白身中心 (ヘルシー 8〜10貫)", cal: 480, salt: 1.8 },
-    { name: "回転寿司・しっかり (12〜14貫)", cal: 800, salt: 3.0 },
-    { name: "助六・巻き寿司 (太巻/いなり等)", cal: 500, salt: 2.5 },
+    { name: "赤身・白身 (8〜10貫)", cal: 480, salt: 1.8 },
+    { name: "回転寿司 (12〜14貫)", cal: 800, salt: 3.0 },
+    { name: "助六・巻寿司 (いなり等)", cal: 500, salt: 2.5 },
     { name: "小腹・軽め (5〜6貫/細巻)", cal: 320, salt: 1.4 }
   ],
   "麻婆豆腐": [
@@ -187,7 +195,7 @@ const SUBTYPES_DEF = {
   ],
   "牛ステーキ": [
     { name: "赤身肉中心 (ヒレ・もも)", cal: 360, salt: 1.0 },
-    { name: "脂身多め (サーロイン/リブロース)", cal: 680, salt: 1.2 }
+    { name: "サーロイン/リブロース", cal: 680, salt: 1.2 }
   ],
   "ハンバーグ": [
     { name: "デミグラス/和風", cal: 380, salt: 1.6 },
@@ -204,7 +212,7 @@ const SUBTYPES_DEF = {
   "餃子・焼売": [
     { name: "焼き餃子 (1皿5〜6個)", cal: 220, salt: 1.1 },
     { name: "水餃子 (1皿5〜6個)", cal: 200, salt: 1.2 },
-    { name: "焼売・中華点心 (4〜5個)", cal: 200, salt: 1.0 }
+    { name: "焼売・点心 (4〜5個)", cal: 200, salt: 1.0 }
   ],
   "ラーメン・中華麺": [
     { name: "中華そば", cal: 450, salt: 2.4 },
@@ -222,7 +230,7 @@ const SUBTYPES_DEF = {
   ]
 };
 
-// 全メニューマスター
+// 全メニューマスター（焼き鳥・果物・ヨーグルト・サラダチキン追加で拡充）
 const DEFAULT_50_MENUS = [
   // 🍚 主食 (18品)
   { id: 1,  cat: "主食", name: "ご飯・白米",       m: true,  l: true,  d: true,  ln: false, cal: 240, salt: 0.0 },
@@ -252,10 +260,12 @@ const DEFAULT_50_MENUS = [
   { id: 18, cat: "汁物", name: "ポタージュ濃縮汁",   m: true, l: true, d: false, ln: false, cal: 95, salt: 1.0 },
   { id: 56, cat: "汁物", name: "ミネストローネ",     m: true, l: true, d: true, ln: true,  cal: 70, salt: 1.1 },
 
-  // 🥩 おかず (22品)
+  // 🥩 おかず (25品)
   { id: 19, cat: "おかず", name: "焼き魚・煮魚",       m: true,  l: true,  d: true, ln: false, cal: 160, salt: 1.1 },
   { id: 20, cat: "おかず", name: "刺身・生魚",         m: false, l: true,  d: true, ln: false, cal: 130, salt: 0.6 },
   { id: 21, cat: "おかず", name: "鶏唐揚げ・チキン",   m: false, l: true,  d: true, ln: true,  cal: 280, salt: 1.0 },
+  { id: 61, cat: "おかず", name: "焼き鳥・串焼き",     m: false, l: true,  d: true, ln: true,  cal: 160, salt: 1.2 },
+  { id: 64, cat: "おかず", name: "サラダチキン・蒸し鶏", m: false, l: true,  d: true, ln: true,  cal: 115, salt: 1.0 },
   { id: 22, cat: "おかず", name: "とんかつ・カツ類",   m: false, l: true,  d: true, ln: false, cal: 450, salt: 1.2 },
   { id: 23, cat: "おかず", name: "豚生姜焼き・野菜炒め", m: false, l: true, d: true, ln: false, cal: 260, salt: 1.2 },
   { id: 24, cat: "おかず", name: "ハンバーグ",         m: false, l: true,  d: true, ln: false, cal: 380, salt: 1.6 },
@@ -274,6 +284,7 @@ const DEFAULT_50_MENUS = [
   { id: 36, cat: "おかず", name: "ポテト・マカロニサラダ", m: false, l: true, d: true, ln: false, cal: 140, salt: 0.6 },
   { id: 37, cat: "おかず", name: "漬物・キムチ",       m: true,  l: true,  d: true, ln: true,  cal: 20,  salt: 1.0 },
   { id: 38, cat: "おかず", name: "惣菜揚げ物(コロッケ等)", m: false, l: true, d: true, ln: false, cal: 200, salt: 0.8 },
+  { id: 63, cat: "おかず", name: "ヨーグルト",         m: true,  l: true,  d: false, ln: false, cal: 65, salt: 0.1 },
   { id: 39, cat: "おかず", name: "その他・残り物惣菜", m: true,  l: true,  d: true, ln: true,  cal: 150, salt: 0.8 },
 
   // ☕ 飲料 (5品)
@@ -283,7 +294,8 @@ const DEFAULT_50_MENUS = [
   { id: 43, cat: "飲料", name: "野菜ジュース",         m: true,  l: true,  d: true, ln: true,  cal: 70,  salt: 0.1 },
   { id: 44, cat: "飲料", name: "オロナミンC",         m: true,  l: true,  d: false, ln: true,  cal: 79,  salt: 0.0 },
 
-  // 🍪 間食 (5品)
+  // 🍪 間食 (6品)
+  { id: 62, cat: "間食", name: "果物・フルーツ(バナナ等)", m: true, l: true, d: false, ln: false, cal: 80, salt: 0.0 },
   { id: 45, cat: "間食", name: "チョコレート",         m: false, l: false, d: false, ln: false, cal: 140, salt: 0.0 },
   { id: 46, cat: "間食", name: "スナック菓子",         m: false, l: false, d: false, ln: false, cal: 165, salt: 0.4 },
   { id: 47, cat: "間食", name: "和菓子・せんべい",     m: false, l: false, d: false, ln: false, cal: 130, salt: 0.3 },
@@ -363,7 +375,7 @@ function getCurrentTimeString() {
 
 function getAppVersion() {
   const badge = document.getElementById('appVersionBadge');
-  return badge ? badge.textContent.trim() : 'v1.4.2';
+  return badge ? badge.textContent.trim() : 'v1.4.3';
 }
 
 function openDatePicker() {
@@ -491,33 +503,34 @@ function rotateTodayHealthTip() {
   displayHealthTipByIndex(currentTipIndex);
 }
 
+// 過去バージョン互換および新メニュー（焼き鳥、果物、ヨーグルト、サラダチキン）自動マイグレーション
 function migratePastVersions() {
   if (!localStorage.getItem(MASTER_KEY_RECORDS)) {
-    for (let v = 15; v >= 1; v--) {
+    for (let v = 16; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_records_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_RECORDS, past); break; }
     }
   }
   if (!localStorage.getItem(MASTER_KEY_SETTINGS)) {
-    for (let v = 15; v >= 1; v--) {
+    for (let v = 16; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_settings_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_SETTINGS, past); break; }
     }
   }
   if (!localStorage.getItem(MASTER_KEY_MENUS)) {
-    for (let v = 15; v >= 1; v--) {
+    for (let v = 16; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_menus_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_MENUS, past); break; }
     }
   }
   if (!localStorage.getItem(MASTER_KEY_MEDS)) {
-    for (let v = 15; v >= 1; v--) {
+    for (let v = 16; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_meds_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_MEDS, past); break; }
     }
   }
   if (!localStorage.getItem(MASTER_KEY_PROFILE)) {
-    for (let v = 15; v >= 1; v--) {
+    for (let v = 16; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_profile_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_PROFILE, past); break; }
     }
@@ -528,7 +541,7 @@ function migratePastVersions() {
     try {
       let existing = JSON.parse(rawM);
 
-      // 卵メニューの名称と初期値アップデート（生卵基準 76kcal / 0.2g）
+      // 卵メニューの名称と初期値
       const eggIdx = existing.findIndex(x => x.name.includes("目玉焼き・卵料理") || x.name === "卵・たまご料理");
       if (eggIdx !== -1) {
         existing[eggIdx].name = "卵・たまご料理";
@@ -538,6 +551,21 @@ function migratePastVersions() {
         existing.push({ id: 27, cat: "おかず", name: "卵・たまご料理", m: true, l: true, d: true, ln: false, cal: 76, salt: 0.2 });
       }
 
+      // 新メニューの自動マージ（焼き鳥、果物、ヨーグルト、サラダチキン）
+      if (!existing.some(x => x.name.includes("焼き鳥・串焼き"))) {
+        existing.push({ id: 61, cat: "おかず", name: "焼き鳥・串焼き", m: false, l: true, d: true, ln: true, cal: 160, salt: 1.2 });
+      }
+      if (!existing.some(x => x.name.includes("サラダチキン"))) {
+        existing.push({ id: 64, cat: "おかず", name: "サラダチキン・蒸し鶏", m: false, l: true, d: true, ln: true, cal: 115, salt: 1.0 });
+      }
+      if (!existing.some(x => x.name.includes("ヨーグルト"))) {
+        existing.push({ id: 63, cat: "おかず", name: "ヨーグルト", m: true, l: true, d: false, ln: false, cal: 65, salt: 0.1 });
+      }
+      if (!existing.some(x => x.name.includes("果物・フルーツ"))) {
+        existing.push({ id: 62, cat: "間食", name: "果物・フルーツ(バナナ等)", m: true, l: true, d: false, ln: false, cal: 80, salt: 0.0 });
+      }
+
+      // 既存の主食・おかずの整合性
       if (!existing.some(x => x.name.includes("寿司・にぎり/巻物"))) {
         existing.push({ id: 57, cat: "主食", name: "寿司・にぎり/巻物", m: false, l: true, d: true, ln: false, cal: 550, salt: 2.2 });
       }
@@ -626,7 +654,6 @@ function initSmartNumpadListeners() {
     input.addEventListener('click', () => openSmartNumpad(input));
   });
 
-  // スクロール時にフォーカス外をタップしたらテンキーを閉じる
   document.getElementById('mainScrollView').addEventListener('touchstart', (e) => {
     if (!e.target.closest('.smart-num-input') && !e.target.closest('#smartNumpadWrap')) {
       closeSmartNumpad();
@@ -851,7 +878,7 @@ function checkAndTriggerSmartNotification() {
   const schedules = [
     { time: "07:30", key: "m_remind", title: "🌅 朝の健康チェック (Dr.ケン)", body: "おはようございます！起床時の睡眠時間・血圧をサッと記録して今日も良い一日を！" },
     { time: "10:30", key: "water_am", title: "🪑 午前の一服＆坐骨リセット (Dr.ケン)", body: "コップ1杯の水分補給（0.25L）をどうぞ！丸めたタオルを腰に挟み、骨盤を垂直に立て直しましょう。" },
-    { time: "12:30", key: "l_remind", title: "☀️ 昼食の記録 (アヤ)", body: "お昼時ですね！生卵やゆで卵、麺類のつゆ残し減塩やソイラテの活用、意識してみてくださいね◎" },
+    { time: "12:30", key: "l_remind", title: "☀️ 昼食の記録 (アヤ)", body: "お昼時ですね！卵や焼き鳥、麺類のつゆ残し減塩やソイラテの活用、意識してみてくださいね◎" },
     { time: "15:30", key: "water_pm", title: "💆‍♂️ 肩こり＆目のリフレッシュ (Dr.ケン)", body: "午後の疲労ピークです！首の後ろのくぼみ（天柱）を5秒押し上げ、肩をストンと落として目を休めましょう。" },
     { time: "19:30", key: "d_remind", title: "🌙 夕食とお酒のチェック (Dr.ケン)", body: "夕食はお済みですか？今夜は休肝日にできると血管と肝臓の修復が進みますよ。" },
     { time: "20:30", key: "face_care", title: "✨ 1分表情筋リリース (アヤ)", body: "お風呂や食後のひと息に『舌回しアイロン』＆『眉間つまみ』！一日の表情のコリを解毒しましょう。" },
@@ -1082,7 +1109,6 @@ function loadMenus() {
   menuMaster = rawM ? JSON.parse(rawM) : JSON.parse(JSON.stringify(DEFAULT_50_MENUS));
 }
 
-// 誤操作防止のため、kcal・塩分は安全にロック（表示時間帯のみ更新・保存）
 function saveMenuMasterChanges() {
   const rows = document.querySelectorAll('#menuMasterTableBody tr');
 
@@ -1115,7 +1141,6 @@ function resetMenusToDefault() {
   alert("初期設定にリセットしました。");
 }
 
-// kcal・塩分を編集不可（読み取り専用・テキスト）にして誤操作防止
 function renderMenuMasterTable() {
   const tbody = document.getElementById('menuMasterTableBody');
   tbody.innerHTML = '';
@@ -1143,6 +1168,10 @@ function escapeHtml(str) {
 function getShortChipLabel(item) {
   const n = item.name;
   if (n === "卵・たまご料理" || n === "目玉焼き・卵料理") return "🥚 卵料理";
+  if (n === "焼き鳥・串焼き") return "🍢 焼き鳥";
+  if (n === "サラダチキン・蒸し鶏") return "🍗 サラダチキン";
+  if (n === "果物・フルーツ(バナナ等)") return "🍌 果物・バナナ";
+  if (n === "ヨーグルト") return "🥣 ヨーグルト";
   if (n === "豚生姜焼き・野菜炒め") return "🐷 豚生姜焼/炒め";
   if (n === "温野菜・ブロッコリー") return "🥦 温野菜";
   if (n === "おひたし・和小鉢") return "🥬 おひたし小鉢";
@@ -1187,7 +1216,7 @@ function rebuildAllInputChips() {
   buildCategoryChips('d_chips_side', 'dinner', menuMaster.filter(x => x.d && x.cat === "おかず"));
   buildCategoryChips('d_chips_drink', 'dinner', menuMaster.filter(x => x.d && x.cat === "飲料"));
 
-  buildCategoryChips('snack_chips', 'snack', menuMaster.filter(x => x.cat === "飲料" || x.cat === "間食" || x.name.includes('おにぎり') || x.name.includes('パン') || x.name.includes('チョコ') || x.name.includes('スナック') || x.name.includes('和菓子') || x.name.includes('ケーキ') || x.name.includes('アイス')));
+  buildCategoryChips('snack_chips', 'snack', menuMaster.filter(x => x.cat === "飲料" || x.cat === "間食" || x.name.includes('果物') || x.name.includes('ヨーグルト') || x.name.includes('おにぎり') || x.name.includes('パン') || x.name.includes('チョコ') || x.name.includes('スナック') || x.name.includes('和菓子') || x.name.includes('ケーキ') || x.name.includes('アイス')));
   buildCategoryChips('latenight_chips', 'latenight', menuMaster.filter(x => x.ln));
 
   rebuildMedChipsUI();
@@ -1321,13 +1350,15 @@ function calcEffectiveItemStats(item) {
   const isTonkatsu = item.name.includes('とんかつ');
   const isSushi = item.name.includes('寿司');
   const isEgg = item.name.includes('卵');
+  const isYakitori = item.name.includes('焼き鳥');
 
   let mult = 1.0;
   if (isSnack) {
     mult = item.amount === '少ない' ? 0.35 : (item.amount === '多い' ? 2.0 : 1.0);
   } else if (isEgg) {
-    // 卵の量：少＝半量(0.5倍) / 普＝1個(1.0倍) / 多＝2個(2.0倍)
     mult = item.amount === '少ない' ? 0.5 : (item.amount === '多い' ? 2.0 : 1.0);
+  } else if (isYakitori) {
+    mult = item.amount === '少ない' ? 0.5 : (item.amount === '多い' ? 1.75 : 1.0);
   } else if (isSteak) {
     mult = item.amount === '少ない' ? 0.6 : (item.amount === '多い' ? 1.75 : 1.0);
   } else if (isHamburg) {
@@ -1470,9 +1501,11 @@ function renderTray(slot) {
       btnLabelLess = "小鉢"; btnLabelNorm = "1人前"; btnLabelMore = "大皿";
       btnTitleLess = "小鉢サイズ"; btnTitleNorm = "標準1人前"; btnTitleMore = "大皿シェア";
     } else if (item.name.includes("卵")) {
-      // 卵の量：違和感を解消し「半量 / 1個 / 2個」に整列
       btnLabelLess = "半量"; btnLabelNorm = "1個"; btnLabelMore = "2個";
       btnTitleLess = "半量(0.5個分)"; btnTitleNorm = "標準(1個)"; btnTitleMore = "多め(2個分)";
+    } else if (item.name.includes("焼き鳥")) {
+      btnLabelLess = "1本"; btnLabelNorm = "2本"; btnLabelMore = "4本";
+      btnTitleLess = "軽め(1本)"; btnTitleNorm = "標準(2本)"; btnTitleMore = "多め(3〜4本)";
     }
 
     const div = document.createElement('div');
@@ -1485,7 +1518,7 @@ function renderTray(slot) {
           <span>${escapeHtml(item.name)}</span>
           ${getSaltBadgeHTML(item)}
         </div>
-        <div style="display:flex; align-items:center; gap:2px;">
+        <div style="display:flex; align-items:center; gap:2px; margin-left:auto;">
           <button class="amt-btn ${item.amount === '少ない' ? 'active' : ''}" data-amt="少ない" title="${btnTitleLess}" onclick="setTrayItemAmount('${slot}', ${index}, '少ない')">${btnLabelLess}</button>
           <button class="amt-btn ${item.amount === '普通' ? 'active' : ''}" data-amt="普通" title="${btnTitleNorm}" onclick="setTrayItemAmount('${slot}', ${index}, '普通')">${btnLabelNorm}</button>
           <button class="amt-btn ${item.amount === '多い' ? 'active' : ''}" data-amt="多い" title="${btnTitleMore}" onclick="setTrayItemAmount('${slot}', ${index}, '多い')">${btnLabelMore}</button>
@@ -1494,8 +1527,8 @@ function renderTray(slot) {
       </div>
       ${hasSub ? `
       <div class="tray-item-sub-row">
-        <div style="display:flex; align-items:center; gap:4px;">
-          <span style="font-size:0.68rem; color:var(--accent-blue); font-weight:bold;">↳</span>
+        <div>
+          <span style="font-size:0.68rem; color:var(--accent-blue); font-weight:bold; flex-shrink:0;">↳</span>
           ${subSelectHTML}
         </div>
         <div class="tray-item-calsalt">約 ${estCal}kcal / ${estSalt}g</div>
@@ -1739,7 +1772,7 @@ function autoSaveField(slot) {
     const nw = parseFloat(document.getElementById('daily_weight').value) || null;
     if (nw) r.weight = nw;
 
-    // 📝 本日の体調・食事特記メモの自動保存
+    // 本日の体調・食事特記メモの自動保存
     r.memo = (document.getElementById('daily_memo')?.value || '').trim();
   }
 
@@ -1788,13 +1821,14 @@ function loadRecordIntoForm(dateStr) {
   if (s.time && !s.isNone) document.getElementById('snack-content').classList.add('open');
   else document.getElementById('snack-content').classList.remove('open');
 
+  // 昼食：デフォルトを「家食」に統一
   const l = r.lunch || {};
   setBadge('badge-lunch', l.time);
   document.getElementById('l_bpSys').value = l.bpSys || '';
   document.getElementById('l_bpDia').value = l.bpDia || '';
   document.getElementById('l_pulse').value = l.pulse || '';
   currentMeds.lunch = l.meds ? JSON.parse(JSON.stringify(l.meds)) : [];
-  setMealTypeSelected('l_mealTypeChips', l.mealType || '外食・中食');
+  setMealTypeSelected('l_mealTypeChips', l.mealType || '家食');
   document.getElementById('l_mealComponentArea').style.display = l.mealType === '抜き' ? 'none' : 'grid';
   currentSelections.lunch = l.items ? JSON.parse(JSON.stringify(l.items)) : [];
   renderTray('lunch');
@@ -1832,7 +1866,6 @@ function loadRecordIntoForm(dateStr) {
   setSelectValueSafely('n_moodStatus', n.moodStatus);
   document.getElementById('daily_weight').value = r.weight || '';
 
-  // 📝 本日のメモ欄の復元
   const memoEl = document.getElementById('daily_memo');
   if (memoEl) memoEl.value = r.memo || '';
 
@@ -2017,9 +2050,15 @@ function updateSidePanelLive(data) {
     const hasSoy = allSelected.some(x => x.name.includes('豆乳') || x.name.includes('納豆') || (x.subtype && x.subtype.includes('豆乳')));
     const hasFish = allSelected.some(x => x.name.includes('魚') || x.name.includes('刺身') || x.name.includes('寿司'));
     const hasEgg = allSelected.some(x => x.name.includes('卵'));
+    const hasYakitori = allSelected.some(x => x.name.includes('焼き鳥'));
+    const hasFruit = allSelected.some(x => x.name.includes('果物') || x.name.includes('バナナ'));
 
     if (data.saltTotal > 7.0) {
-      nutMsgEl.innerHTML = `推定塩分が<b>${data.saltTotal.toFixed(1)}g</b>です。「野菜ジュース」や「豆乳コーヒー」をプラスしてカリウムで塩分排出を促しましょう！`;
+      nutMsgEl.innerHTML = `推定塩分が<b>${data.saltTotal.toFixed(1)}g</b>です。「野菜ジュース」や「果物」「豆乳」をプラスしてカリウムで塩分排出を促しましょう！`;
+    } else if (hasYakitori) {
+      nutMsgEl.innerHTML = `焼き鳥が入っていますね！ささみやレバーは高タンパク・高鉄分で最高の選択です◎皮などの脂質には少し気を配りましょう。`;
+    } else if (hasFruit) {
+      nutMsgEl.innerHTML = `果物（バナナ等）が入っていますね！豊富なカリウムが血管内の余分なナトリウム排出を力強く促進します◎`;
     } else if (hasCake) {
       nutMsgEl.innerHTML = `スイーツを楽しまれましたね！おやつを味わうのも長続きの秘訣です。夕食を少し軽めに調整すればバッチリです◎`;
     } else if (hasEgg) {
@@ -2381,7 +2420,7 @@ function generateExpertComments(stats) {
   } else {
     let nutMsg = `推定平均塩分は <b>${stats.avgSalt} g</b>（目標6.0g未満）です。`;
     if (stats.soyMilkDays > 0) nutMsg += ` 豆乳コーヒーや大豆製品のカリウムが塩分排泄を力強くサポートしています◎`;
-    if (cares.includes("脂質異常症")) nutMsg += ` 揚げ物やお肉の際は赤身肉や魚料理（刺身・寿司）、卵料理や野菜小鉢を選ぶ組み合わせが極めて効果的です。`;
+    if (cares.includes("脂質異常症")) nutMsg += ` 揚げ物やお肉の際は赤身肉や魚料理（刺身・寿司）、卵料理や焼き鳥（ささみ・レバー）、野菜小鉢を選ぶ組み合わせが極めて効果的です。`;
     nutEl.innerHTML = nutMsg;
   }
 }
@@ -2441,7 +2480,6 @@ function exportFullJSON() {
   URL.revokeObjectURL(url);
 }
 
-// 過去バージョン・欠損データを完全吸収する超堅牢インポート
 function importFullJSON(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -2468,7 +2506,6 @@ function importFullJSON(event) {
 
       if (!confirm("【確認】このファイルを復元すると、バックアップ時の状態に安全に復元されます。よろしいですか？")) return;
 
-      // 1. プロファイルの安全マージ
       if (data.profile) {
         userProfile = Object.assign(JSON.parse(JSON.stringify(DEFAULT_PROFILE)), data.profile);
         if (!userProfile.milestones || !Array.isArray(userProfile.milestones) || userProfile.milestones.length === 0) {
@@ -2481,13 +2518,11 @@ function importFullJSON(event) {
         localStorage.setItem(MASTER_KEY_PROFILE, JSON.stringify(userProfile));
       }
 
-      // 2. お薬設定の安全マージ
       if (data.meds && Array.isArray(data.meds)) {
         medMaster = data.meds;
         localStorage.setItem(MASTER_KEY_MEDS, JSON.stringify(medMaster));
       }
 
-      // 3. 設定（Settings）の安全ディープマージ
       if (data.settings) {
         currentSettings = {
           morning: Object.assign({ med: true, bp: true, weight: false }, data.settings.morning || {}),
@@ -2499,7 +2534,6 @@ function importFullJSON(event) {
         localStorage.setItem(MASTER_KEY_SETTINGS, JSON.stringify(currentSettings));
       }
 
-      // 4. メニュー設定の安全マージ（卵メニュー・新メニューの自動維持）
       if (data.menus && Array.isArray(data.menus)) {
         let mergedMenus = data.menus;
         const eggIdx = mergedMenus.findIndex(x => x.name.includes("目玉焼き・卵料理") || x.name === "卵・たまご料理");
@@ -2509,6 +2543,19 @@ function importFullJSON(event) {
           mergedMenus[eggIdx].salt = 0.2;
         } else {
           mergedMenus.push({ id: 27, cat: "おかず", name: "卵・たまご料理", m: true, l: true, d: true, ln: false, cal: 76, salt: 0.2 });
+        }
+
+        if (!mergedMenus.some(x => x.name.includes("焼き鳥・串焼き"))) {
+          mergedMenus.push({ id: 61, cat: "おかず", name: "焼き鳥・串焼き", m: false, l: true, d: true, ln: true, cal: 160, salt: 1.2 });
+        }
+        if (!mergedMenus.some(x => x.name.includes("サラダチキン"))) {
+          mergedMenus.push({ id: 64, cat: "おかず", name: "サラダチキン・蒸し鶏", m: false, l: true, d: true, ln: true, cal: 115, salt: 1.0 });
+        }
+        if (!mergedMenus.some(x => x.name.includes("ヨーグルト"))) {
+          mergedMenus.push({ id: 63, cat: "おかず", name: "ヨーグルト", m: true, l: true, d: false, ln: false, cal: 65, salt: 0.1 });
+        }
+        if (!mergedMenus.some(x => x.name.includes("果物・フルーツ"))) {
+          mergedMenus.push({ id: 62, cat: "間食", name: "果物・フルーツ(バナナ等)", m: true, l: true, d: false, ln: false, cal: 80, salt: 0.0 });
         }
 
         if (!mergedMenus.some(x => x.name.includes("寿司・にぎり/巻物"))) {
@@ -2527,7 +2574,6 @@ function importFullJSON(event) {
         localStorage.setItem(MASTER_KEY_MENUS, JSON.stringify(menuMaster));
       }
 
-      // 5. 日次記録の復元
       if (importedRecords) {
         allRecords = importedRecords;
         localStorage.setItem(MASTER_KEY_RECORDS, JSON.stringify(allRecords));
@@ -2662,7 +2708,7 @@ function importDataFromCSV(event) {
             bpDia: c[19] ? parseFloat(c[19]) : null,
             pulse: c[20] ? parseInt(c[20], 10) : null,
             meds: c[21] ? c[21].split(';') : [],
-            mealType: c[22] || '外食・中食',
+            mealType: c[22] || '家食',
             items: parseItemsFromCSV(c[23])
           },
           dinner: {
@@ -2746,7 +2792,7 @@ function factoryResetAll() {
   localStorage.removeItem(MASTER_KEY_MEDS);
   localStorage.removeItem(MASTER_KEY_PROFILE);
 
-  for (let v = 1; v <= 15; v++) {
+  for (let v = 1; v <= 16; v++) {
     localStorage.removeItem(`health_kun_records_v${v}`);
     localStorage.removeItem(`health_kun_settings_v${v}`);
     localStorage.removeItem(`health_kun_menus_v${v}`);
