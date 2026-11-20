@@ -1,4 +1,4 @@
-<!-- [稼働Ver 作業版 Rev.5] メニュー名短縮・チーズ/明太子/味噌汁2択PFC完全対応・PC限定Gemini AI総合相談＆メニュー逆引き判定室実装 -->
+<!-- [稼働Ver 作業版 Rev.6] Geminiスマートトリアージ(医師単独/栄養士単独/両名自律判定)・お薬二重名称(正式名連携)・PFC完全同期 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -269,8 +269,8 @@
     <!-- 🤖 PC限定 Gemini AI 臨床健康相談 ＆ メニュー選び逆引きアシスタント -->
     <div class="ai-consultation-card no-print">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <span style="font-size:0.95rem; font-weight:800; color:#ffffff;">🤖 Dr.ケン ＆ 管理栄養士 アヤのAI総合相談室（Gemini連携・個人情報完全保護）</span>
-        <span style="font-size:0.72rem; color:var(--accent-blue); font-weight:bold;">※辞書一覧を見渡しながらゆったり質問できます</span>
+        <span style="font-size:0.95rem; font-weight:800; color:#ffffff;">🤖 専任医療チーム AI総合相談室（Gemini連携・スマートトリアージ・個人情報完全保護）</span>
+        <span style="font-size:0.72rem; color:var(--accent-blue); font-weight:bold;">※質問内容に応じて医師/栄養士が最適に単独または共同で回答します</span>
       </div>
 
       <div class="ai-api-setup-bar">
@@ -280,12 +280,12 @@
       </div>
 
       <div class="consultation-input-row">
-        <textarea id="aiConsultationInput" class="consultation-textarea" placeholder="例: 「お昼に定食屋で生姜焼きと奥さんの作った味噌汁、明太子ご飯を食べたけど、どれを登録すればいい？」「最近朝の血圧が135を超える日が多いけど対策は？」など何でもご相談ください"></textarea>
-        <button class="btn btn-blue" id="btnConsultAi" style="padding:0 18px; font-size:0.85rem;" onclick="runAiConsultation()">✨ AIに質問・判定する</button>
+        <textarea id="aiConsultationInput" class="consultation-textarea" placeholder="例: 「お昼に定食屋で生姜焼きと奥さんの作った味噌汁、明太子ご飯を食べたけど、どれを登録すればいい？」「降圧剤とお酒の飲み合わせについて教えて」「最近朝の血圧が135を超える日が多いけど対策は？」など何でもご相談ください"></textarea>
+        <button class="btn btn-blue" id="btnConsultAi" style="padding:0 18px; font-size:0.85rem;" onclick="runAiConsultation()">✨ AIに質問・相談する</button>
       </div>
 
       <div class="consultation-output-box" id="consultationOutputArea">
-        上の入力枠に質問や食べた食事内容を入力して「AIに質問・判定する」を押すと、下の辞書テーブルの正式メニュー名（少/普/多）を名指しで判定し、Dr.ケンと管理栄養士アヤが具体的なアドバイスを回答します。
+        上の入力枠に健康相談や食べた食事内容を入力して「AIに質問・相談する」を押すと、質問内容を自動トリアージ（判定）し、循環器内科専門医Dr.ケンまたは管理栄養士アヤがあなたのバイタル・お薬・特記メモを踏まえて最適なアドバイスを回答します。
       </div>
     </div>
 
@@ -373,7 +373,7 @@
       </div>
 
       <div class="consultation-output-box" id="conferenceOutputArea">
-        「カンファレンスを実行」ボタンを押すと、期間中の朝晩血圧乖離・脈圧・PFCバランス・睡眠・体調特記メモを網羅した詳細な臨床カルテと栄養指導を生成します。
+        「カンファレンスを実行」ボタンを押すと、期間中の朝晩血圧乖離・脈圧・PFCバランス・睡眠・お薬の正式名称・体調特記メモを網羅した詳細な臨床カルテと栄養指導を生成します。
       </div>
     </div>
 
@@ -581,7 +581,7 @@
 </main>
 
 <script>
-// [稼働Ver 作業版 Rev.5] PC Viewer ロジック実装
+// [稼働Ver 作業版 Rev.6] PC Viewer ロジック実装
 
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
 const MASTER_KEY_SETTINGS = 'health_kun_data_master_settings';
@@ -612,7 +612,7 @@ const COMPREHENSIVE_FOOD_DICT = [
   { cat: "主食", name: "すき焼き丼", portion: "並盛 1杯 (牛肉・豆腐・玉ねぎ)", levels: "少:小盛 / 普:並盛 / 多:大盛", cal: 750, salt: 2.8, p: 22.0, f: 22.0, c: 108.0, memo: "割り下による糖質・塩分を含む。卵でタンパク質強化" },
   { cat: "主食", name: "チャーシュー丼", portion: "並盛 1杯 (煮豚・タレ)", levels: "少:ミニ丼 / 普:並盛 / 多:肉増し大盛", cal: 680, salt: 2.6, p: 24.0, f: 22.0, c: 92.0, memo: "豚バラ肉の動物性脂質。ラーメンセット時は半量推奨" },
 
-  // 🍲 汁物（超シンプル2択化）
+  // 🍲 汁物
   { cat: "汁物", name: "味噌汁", portion: "お椀1杯 (汁半分:0.6g / 普通:1.2g)", levels: "少:具のみ / 普:1杯 / 多:大椀", cal: 40, salt: 0.6, p: 2.5, f: 1.2, c: 4.5, memo: "【サブタイプあり】汁半分(減塩・0.6g / 自分で作った時) / 普通(1.2g / 奥様の手料理・外食定食)" },
   { cat: "汁物", name: "普通 (標準)", portion: "お椀1杯 汁全飲み (約150ml)", levels: "少:具中心 / 普:1杯 / 多:大椀", cal: 45, salt: 1.2, p: 2.8, f: 1.2, c: 5.0, memo: "味噌汁の標準塩分。奥様が作った時や外食・定食での一杯" },
   { cat: "汁物", name: "汁半分 (減塩)", portion: "お椀1杯 汁半分飲み (約150ml)", levels: "少:具中心 / 普:1杯 / 多:大椀", cal: 40, salt: 0.6, p: 2.5, f: 1.2, c: 4.5, memo: "自炊時の減塩工夫。具だくさん＋汁半分で塩分0.6gに抑制" },
@@ -626,8 +626,6 @@ const COMPREHENSIVE_FOOD_DICT = [
   { cat: "おかず", name: "焼き魚・煮魚", portion: "切り身 1切 (約80〜100g)", levels: "少:小さめ切身 / 普:1切(約90g) / 多:大ぶり/2切", cal: 160, salt: 1.1, p: 19.5, f: 8.5, c: 0.8, memo: "鮭/サバ/ホッケ。オメガ3（EPA・DHA）が血管内皮を修復" },
   { cat: "おかず", name: "刺身・生魚", portion: "盛り合わせ (約5〜6切・100g)", levels: "少:3切 / 普:1人前(5〜6切) / 多:舟盛り/多め", cal: 130, salt: 0.6, p: 22.0, f: 4.5, c: 0.2, memo: "【サブタイプあり】赤身(100kcal)/白身(90kcal)/青魚(150kcal)/トロ(180kcal)" },
   { cat: "おかず", name: "鶏唐揚げ・チキン", portion: "標準サイズ 3個 (約90g)", levels: "少:1〜2個 / 普:3個 / 多:5個以上", cal: 280, salt: 1.0, p: 16.5, f: 18.0, c: 11.0, memo: "良質な動物性タンパク質。揚げ油の酸化に配慮" },
-  
-  // 🍢 焼き鳥・串焼き
   { cat: "おかず", name: "焼き鳥・串焼き", portion: "串焼き 2本 (約80g)", levels: "少:1本 / 普:2本 / 多:4本", cal: 160, salt: 1.2, p: 18.0, f: 8.5, c: 1.2, memo: "【サブタイプあり】もも(塩/タレ)/ささみ(120kcal)/レバー(110kcal)/皮(300kcal)" },
   { cat: "おかず", name: "もも・ねぎま (塩)", portion: "串焼き 2本 (約80g)", levels: "少:1本 / 普:2本 / 多:4本", cal: 160, salt: 1.2, p: 18.0, f: 8.5, c: 0.5, memo: "良質な動物性タンパク質。塩味で糖質オフ" },
   { cat: "おかず", name: "もも・ねぎま (タレ)", portion: "串焼き 2本 (約80g)", levels: "少:1本 / 普:2本 / 多:4本", cal: 180, salt: 1.6, p: 17.5, f: 8.5, c: 6.0, memo: "タレの糖分と塩分が加算" },
@@ -636,13 +634,13 @@ const COMPREHENSIVE_FOOD_DICT = [
   { cat: "おかず", name: "皮・かわ (脂多)", portion: "串焼き 2本 (約80g)", levels: "少:1本 / 普:2本 / 多:4本", cal: 300, salt: 1.2, p: 10.0, f: 28.0, c: 0.0, memo: "動物性脂質・飽和脂肪酸が高いため頻度に配慮" },
   { cat: "おかず", name: "盛り合わせ (3本)", portion: "串焼き 3本盛り", levels: "少:2本 / 普:3本 / 多:5本", cal: 240, salt: 1.8, p: 24.0, f: 13.0, c: 3.0, memo: "定番部位の盛り合わせ" },
 
-  // 🧀 チーズ (新規)
+  // 🧀 チーズ
   { cat: "おかず", name: "チーズ", portion: "スライス1枚 / 個包装1個 (約20g)", levels: "少:10g(ハーフ) / 普:20g(1枚/個) / 多:40g(2枚/ピザ用)", cal: 63, salt: 0.6, p: 4.5, f: 5.2, c: 0.3, memo: "【サブタイプあり】スライス・ベビー/とろける(66kcal)/カマンベール(62kcal/0.4g)。カルシウム・タンパク質補給" },
   { cat: "おかず", name: "スライス・ベビー", portion: "プロセスチーズ 1個 (約20g)", levels: "少:10g / 普:20g / 多:40g", cal: 63, salt: 0.6, p: 4.5, f: 5.2, c: 0.3, memo: "良質なカルシウムと乳タンパク質" },
   { cat: "おかず", name: "とろける", portion: "ピザ用・加熱用 20g", levels: "少:10g / 普:20g / 多:40g", cal: 66, salt: 0.6, p: 4.4, f: 5.4, c: 0.4, memo: "トーストや料理のトッピングに" },
   { cat: "おかず", name: "カマンベール", portion: "白カビチーズ 20g", levels: "少:10g / 普:20g / 多:40g", cal: 62, salt: 0.4, p: 3.8, f: 5.0, c: 0.2, memo: "塩分やや控えめ。ビタミンB2豊富" },
 
-  // 🌶️ 明太子 (新規)
+  // 🌶️ 明太子
   { cat: "おかず", name: "明太子", portion: "半腹・一口大 (約25g)", levels: "少:12g(一口) / 普:25g(半腹) / 多:50g(1本)", cal: 30, salt: 1.4, p: 5.3, f: 0.8, c: 0.8, memo: "高タンパクだが塩分・プリン体高め。高血圧時は『少なめ』や果物・野菜との併用推奨" },
 
   // 🍗 サラダチキン
@@ -655,7 +653,7 @@ const COMPREHENSIVE_FOOD_DICT = [
   { cat: "おかず", name: "牛焼肉", portion: "ロース・赤身肉中心 1人前(100g)", levels: "少:ハーフ / 普:1人前(100g) / 多:肉増し(180g)", cal: 240, salt: 1.0, p: 20.0, f: 16.0, c: 3.0, memo: "【サブタイプあり】カルビ・脂身多め(380kcal)" },
   { cat: "おかず", name: "ホルモン・レバー", portion: "ニラレバ/ホルモン 1皿", levels: "少:小鉢 / 普:1皿 / 多:大盛り", cal: 250, salt: 1.2, p: 18.0, f: 16.0, c: 6.5, memo: "【サブタイプあり】レバー(高鉄分・140kcal) / ホルモン(280kcal)" },
 
-  // 🥚 卵6大メニュー
+  // 🥚 卵料理
   { cat: "おかず", name: "卵・たまご料理", portion: "生卵 1個 (約60g)", levels: "少:半量 / 普:1個(標準) / 多:2個", cal: 76, salt: 0.2, p: 6.5, f: 5.4, c: 0.2, memo: "【サブタイプあり】生卵/半熟/ゆで卵(各76kcal)/目玉焼き(95kcal)/卵焼き(110kcal)/スクランブル(120kcal)" },
   { cat: "おかず", name: "生卵", portion: "鶏卵 1個分 (約60g)", levels: "少:半量 / 普:1個 / 多:2個", cal: 76, salt: 0.2, p: 6.5, f: 5.4, c: 0.2, memo: "アミノ酸スコア100。油不使用で朝食に最適" },
   { cat: "おかず", name: "ゆで卵", portion: "固ゆで卵 1個分 (約60g)", levels: "少:半量 / 普:1個 / 多:2個", cal: 76, salt: 0.2, p: 6.5, f: 5.4, c: 0.2, memo: "油不使用。腹持ち良好・作り置きに便利" },
@@ -853,7 +851,23 @@ function escapeHtml(str) {
   return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
-// TAB 1: PC限定 Gemini AI総合相談 ＆ 食事メニュー逆引き判定ロジック
+// 登録中のお薬の正式名称サマリーを生成（AIプロンプト・カルテ用）
+function getFormalMedicationSummary() {
+  if (!globalMeds || globalMeds.length === 0) return 'なし';
+  const activeMeds = globalMeds.filter(m => m.m || m.l || m.d || m.n);
+  if (activeMeds.length === 0) return 'なし (現在服用薬なし)';
+  return activeMeds.map(m => {
+    const timing = [];
+    if (m.m) timing.push('朝');
+    if (m.l) timing.push('昼');
+    if (m.d) timing.push('晩');
+    if (m.n) timing.push('就');
+    const fName = m.formalName ? m.formalName : m.name;
+    return `${fName} [${m.name}] (${timing.join('・')})`;
+  }).join('、 ');
+}
+
+// TAB 1: PC限定 Gemini AI総合相談 ＆ スマートトリアージ判定室
 async function runAiConsultation() {
   const inputEl = document.getElementById('aiConsultationInput');
   const outputEl = document.getElementById('consultationOutputArea');
@@ -861,7 +875,7 @@ async function runAiConsultation() {
   const query = (inputEl.value || '').trim();
 
   if (!query) {
-    alert("質問内容や食べた食事を入力してください。（例: お昼に定食屋で生姜焼きと明太子、奥さんの味噌汁を食べた）");
+    alert("相談内容や質問、食べた食事を入力してください。（例: お昼に定食屋で生姜焼きを食べたがどれを選べばいい？ / 降圧薬とお酒の飲み合わせについて）");
     return;
   }
 
@@ -869,49 +883,68 @@ async function runAiConsultation() {
 
   btn.disabled = true;
   btn.textContent = "⏳ 解析中...";
-  outputEl.innerHTML = "Dr.ケンと管理栄養士アヤが食品辞書と照合し、最適なメニュー判定とアドバイスを作成中です...";
+  outputEl.innerHTML = "専任医療チームが質問内容を自動トリアージし、あなたのバイタル・お薬・体調メモを踏まえて最適な専門家回答を生成中です...";
 
-  // 個人情報を完全にマスキングした患者バイタル要約を準備
   const recentRecords = getFilteredRecords('14d');
-  let avgSys = 0, countSys = 0, avgSalt = 0;
+  let avgSys = 0, avgDia = 0, countSys = 0, avgSalt = 0;
+  const recentMemos = [];
+
   if (recentRecords.length > 0) {
-    let sumS = 0, sumSalt = 0;
+    let sumS = 0, sumD = 0, sumSalt = 0;
     recentRecords.forEach(r => {
       const s = r.morning?.bpSys || r.night?.bpSys;
-      if (s) { sumS += s; countSys++; }
+      const d = r.morning?.bpDia || r.night?.bpDia;
+      if (s && d) { sumS += s; sumD += d; countSys++; }
       const pfc = calculatePFCForDay(r);
       sumSalt += pfc.salt;
+      if (r.memo && r.memo.trim()) recentMemos.push(`・${r.date}: ${r.memo.trim()}`);
     });
-    if (countSys > 0) avgSys = Math.round(sumS / countSys);
+    if (countSys > 0) {
+      avgSys = Math.round(sumS / countSys);
+      avgDia = Math.round(sumD / countSys);
+    }
     avgSalt = Number((sumSalt / recentRecords.length).toFixed(1));
   }
 
+  const memoContext = recentMemos.length > 0 ? recentMemos.slice(-5).join('\n') : '特記なし（体調安定）';
+  const medsSummary = getFormalMedicationSummary();
+
   const anonymizedProfile = `
-【匿名患者プロファイル】
-年代/性別: ${globalProfile.age || '50代'} ${globalProfile.gender || '男性'}
-重点ケア: ${(globalProfile.cares || ['高血圧', '脂質異常症']).join(', ')}
-直近14日間の平均血圧: ${avgSys ? `${avgSys} mmHg` : '未測定'}
+【匿名患者臨床プロファイル】
+年代/性別: ${globalProfile.age || '50代'} ${globalProfile.gender || '男性'} (身長: ${globalProfile.height || 172}cm)
+重点ケア疾患: ${(globalProfile.cares || ['高血圧', '脂質異常症']).join(', ')}
+現在服用中のお薬・サプリ(正式規格): ${medsSummary}
+直近14日間の平均血圧: ${avgSys ? `${avgSys}/${avgDia} mmHg` : '未測定'}
 直近14日間の推定食塩: ${avgSalt ? `${avgSalt} g/日` : '未測定'}
+直近の患者体調特記メモ:
+${memoContext}
   `.trim();
 
   const menuListSummary = COMPREHENSIVE_FOOD_DICT.map(x => x.name).join('、');
 
   const prompt = `
-あなたは循環器内科専門医「Dr.ケン」と管理栄養士「アヤ」です。
-ユーザーから「食事の入力方法の相談（何を選べばいいか）」または「健康・バイタルに関する疑問」が寄せられました。
-以下の【登録可能メニュー一覧】および【匿名患者プロファイル】を参照し、親切かつ臨床的に的確に回答してください。
+あなたは循環器内科専門医「Dr.ケン」と臨床病態管理栄養士「アヤ」です。
+ユーザーから健康相談または食事メニューの登録相談が寄せられました。
+以下の【匿名患者臨床プロファイル】および【登録可能メニュー一覧】を熟読した上で、相談内容の性質に応じてスマートに回答者を振り分け（トリアージ）、専門的かつ親切に回答してください。
 
 【厳格なプライバシー保護要件】
-※個人を特定できる情報は一切使用・推測せず、医学的・栄養学的な助言に徹すること。
+※個人を特定できる情報（氏名・住所等）は一切出力せず、医学的・栄養学的知見のみを出力してください。
 
-【回答の要件（文字途切れ防止・辞書メニュー名指定）】
-1. ユーザーが食事内容について質問している場合:
-   - 下記の【登録可能メニュー一覧】にある正式名称の中から、どれを「少 / 普 / 多」で登録すれば最も近いかを具体的に指定してください。
+【スマート・トリアージ（回答者自律選定ルール）】
+ユーザーの相談内容を判定し、最適な専門家のみが回答すること。無理に両名で回答してはならない。
+1. 🩺 【医療・血圧・病気・症状・お薬・副作用・検査値・頭痛・めまい等の相談】:
+   ➔ 🩺 【Dr.ケン (循環器内科) の臨床回答】のみを出力すること（管理栄養士アヤは無理に口を挟まない）。
+   - 患者の服用薬（${medsSummary}）や直近血圧、体調メモとの関連を具体的に解説。
+2. 🥗 【食事・食品選び・メニュー逆引き・減塩・レシピ・PFC・間食・お酒等の相談】:
+   ➔ 🥗 【管理栄養士 アヤ の栄養・メニュー処方】のみを出力すること（Dr.ケンは無理に口を挟まない）。
+   - 食べた食事の相談の場合、下記の【登録可能メニュー一覧】から正式名称を名指しして「少 / 普 / 多」で指定すること。
    - 例: 「豚生姜焼・炒め (普)」＋「ご飯・白米 (普)」＋「味噌汁 (普通・標準)」＋「明太子 (少)」
-   - 特に味噌汁について「奥さんが作った」「外食」とある場合は、塩分1.2gの「味噌汁 (普通)」を案内し、「自分で具だくさん・汁半分にした」場合は「味噌汁 (汁半分)」を指定してください。
-2. 健康相談の場合:
-   - 循環器内科の視点（Dr.ケン）と管理栄養士の視点（アヤ）から簡潔・明快に助言してください。
-3. 途切れ防止: 各文章は必ず完全な文末（句点）で完結させてください。
+   - 味噌汁は「奥様が作った/外食」なら「普通 (標準)」、「自分で具だくさん汁半分」なら「汁半分 (減塩)」を指定。
+3. 🩺🥗 【健診結果の総合対策・生活習慣全般・「何から始めればいい？」等の総合相談】:
+   ➔ 🩺 【Dr.ケン】と 🥗 【管理栄養士 アヤ】の両名がそれぞれの専門領域から役割分担して回答すること。
+
+【文字途切れ防止の厳守】
+※文章末尾の途切れを絶対に防ぐため、各項目は要点を簡潔・明快にまとめ、必ず文章の結び（句点）まで過不足なく完結させて出力してください。
 
 【登録可能メニュー一覧】
 ${menuListSummary}
@@ -936,13 +969,15 @@ ${query}
   }
 
   btn.disabled = false;
-  btn.textContent = "✨ AIに質問・判定する";
+  btn.textContent = "✨ AIに質問・相談する";
 }
 
 function generateRuleBasedConsultation(query) {
   const q = query.toLowerCase();
-  let suggestions = [];
+  const isMedOrBp = /血圧|薬|降圧|アスピリン|タケキャブ|ジルムロ|スタチン|カルベジロール|頭痛|めまい|熱|脈|心臓|胸/.test(q);
+  const isFood = /食べ|飯|食|朝食|昼食|夕食|ラーメン|味噌汁|定食|生姜焼|肉|魚|寿司|カレー|間食|酒|ビール|カロリー|塩分|明太子|チーズ/.test(q);
 
+  let suggestions = [];
   if (q.includes('生姜焼き') || q.includes('野菜炒め')) suggestions.push('「豚生姜焼・炒め」➔ [普]');
   if (q.includes('ハンバーグ')) suggestions.push('「ハンバーグ」➔ [普]');
   if (q.includes('ステーキ')) suggestions.push('「牛ステーキ」➔ [普]');
@@ -968,13 +1003,36 @@ function generateRuleBasedConsultation(query) {
     }
   }
 
-  let html = `<div class="conf-nut"><b style="color:var(--accent-green); font-size:0.88rem;">🥗 管理栄養士 アヤのメニュー逆引き判定:</b><br>`;
-  if (suggestions.length > 0) {
-    html += `ご入力いただいた食事内容から、アプリ内の以下のメニューを選択するのが最も近いです！<br><br>`;
-    suggestions.forEach(s => { html += `・<b>${s}</b><br>`; });
-    html += `<br><small style="color:var(--text-muted);">※APIキーを上の枠に入力すると、Gemini AIがさらに自由な文章から臨床背景を踏まえた完全なアドバイスを直筆します。</small></div>`;
+  let html = '';
+
+  // スマート・トリアージ（ルールベース版）
+  if (isMedOrBp && !isFood) {
+    // 医師単独
+    html += `<div class="conf-doc"><b style="color:var(--accent-blue); font-size:0.88rem;">🩺 Dr.ケン (循環器内科) の臨床回答:</b><br>`;
+    html += `お薬や血圧に関するご相談ですね。処方薬（降圧薬・脂質薬・抗血小板薬等）の服用中は、急激な血圧変動や飲み合わせ（グレープフルーツやお酒の過度な摂取）に留意が必要です。<br>`;
+    html += `家庭血圧は座って1〜2分安静にしてから測定し、気になる症状や血圧上昇が続く際は自己判断で服薬を中断せず、主治医へご相談ください。<br><br>`;
+    html += `<small style="color:var(--text-muted);">※APIキーを上の枠に入力すると、Gemini AIが現在の処方名（${getFormalMedicationSummary()}）とバイタルを踏まえ、さらに具体的な臨床助言を行います。</small></div>`;
+  } else if (isFood && !isMedOrBp) {
+    // 栄養士単独
+    html += `<div class="conf-nut"><b style="color:var(--accent-green); font-size:0.88rem;">🥗 管理栄養士 アヤ のメニュー処方:</b><br>`;
+    if (suggestions.length > 0) {
+      html += `ご入力いただいた食事内容から、アプリ内の以下のメニューを選択するのが最も近いです！<br><br>`;
+      suggestions.forEach(s => { html += `・<b>${s}</b><br>`; });
+      html += `<br><small style="color:var(--text-muted);">※APIキーを上の枠に入力すると、Gemini AIがPFCバランスや相殺食材まで含めて完全回答します。</small></div>`;
+    } else {
+      html += `ご入力のメニュー候補を解析しました。下の辞書一覧から該当する主食・おかずをお選びいただき、ぴったりな品がない場合は「残り物惣菜」でポーション（少/普/多）を調整してご登録ください。</div>`;
+    }
   } else {
-    html += `ご入力のメニュー候補を解析しました。下の辞書一覧から該当する主食・おかずをお選びいただき、ぴったりな品がない場合は「残り物惣菜」や「その他」でポーション（少/普/多）を調整してご登録ください。</div>`;
+    // 双方回答
+    html += `<div class="conf-doc"><b style="color:var(--accent-blue); font-size:0.88rem;">🩺 Dr.ケン (循環器内科) の臨床助言:</b><br>`;
+    html += `日々の血圧管理と食事習慣は表裏一体です。起床直後の血圧測定と服薬の継続が血管事故予防の基盤となります。</div>`;
+    html += `<div class="conf-nut"><b style="color:var(--accent-green); font-size:0.88rem;">🥗 管理栄養士 アヤ の栄養アドバイス:</b><br>`;
+    if (suggestions.length > 0) {
+      suggestions.forEach(s => { html += `・<b>${s}</b><br>`; });
+    } else {
+      html += `減塩と野菜・カリウムの積極摂取を心がけましょう！下の辞書一覧からメニューをお選びください。`;
+    }
+    html += `</div>`;
   }
 
   return html;
@@ -1081,7 +1139,6 @@ function refreshAnalysis() {
   const dates = [];
   const mSysArr = [], mDiaArr = [];
   const nSysArr = [], nDiaArr = [];
-  const meDiffArr = [];
   const weights = [];
   const steps = [];
   const sleepHours = [];
@@ -1106,12 +1163,6 @@ function refreshAnalysis() {
     nDiaArr.push(nDia);
     if (nSys && nDia) {
       sumSysN += nSys; sumDiaN += nDia; countN++;
-    }
-
-    if (mSys && nSys) {
-      meDiffArr.push(mSys - nSys);
-    } else {
-      meDiffArr.push(null);
     }
 
     weights.push(rec.weight || null);
@@ -1299,7 +1350,7 @@ async function runAiConference() {
 
   btn.disabled = true;
   btn.textContent = "⏳ 臨床データ解析中...";
-  outputEl.innerHTML = "循環器内科専門医および管理栄養士が最新のバイタル・PFC栄養・睡眠相関・特記体調メモをカンファレンス中です...";
+  outputEl.innerHTML = "循環器内科専門医および管理栄養士が最新のバイタル・PFC栄養・睡眠相関・正式処方薬・特記体調メモをカンファレンス中です...";
 
   const period = document.getElementById('analysisPeriodSelect').value;
   const list = getFilteredRecords(period);
@@ -1348,10 +1399,13 @@ async function runAiConference() {
     ? `\n【期間中の患者特記・体調＆食事メモ】\n${memoList.join('\n')}`
     : `\n【期間中の患者特記・体調＆食事メモ】\n特記なし（体調安定）`;
 
+  const medsSummary = getFormalMedicationSummary();
+
   const clinicalSummaryText = `
 【匿名患者基本情報】
 年齢/性別: ${globalProfile.age || '50代'} ${globalProfile.gender || '男性'}, 身長: ${globalProfile.height || 172}cm
 重点疾患: ${(globalProfile.cares || ['高血圧', '脂質異常症']).join(', ')}
+現在服用中のお薬・サプリ(正式規格): ${medsSummary}
 
 【直近臨床バイタル統計 (${list.length}日間)】
 ・朝血圧平均: ${avgSysM}/${avgDiaM} mmHg (測定 ${countM}回)
@@ -1385,7 +1439,7 @@ ${memoSectionText}
 async function callGeminiApiWithFallback(apiKey, summaryData) {
   const prompt = `
 あなたは循環器内科専門医「Dr.ケン」と臨床病態管理栄養士「アヤ」です。
-以下の患者バイタル、生活習慣データ、および患者の日々の特記メモを分析し、専門医と栄養士の2つの視点から具体的で実用的な臨床カルテと栄養指導を日本語で記述してください。
+以下の患者バイタル、生活習慣データ、正式処方薬、および患者の日々の特記メモを分析し、専門医と栄養士の2つの視点から具体的で実用的な臨床カルテと栄養指導を日本語で記述してください。
 
 【厳格なプライバシー保護要件】
 ※個人を特定できる情報（氏名・居住地等）は一切出力せず、臨床医学的・栄養学的知見のみを出力してください。
@@ -1399,7 +1453,7 @@ ${summaryData}
 1. 🩺 【Dr.ケン (循環器内科) の臨床所見】:
    - 朝と就寝前の血圧差（モーニングサージ有無）
    - 脈圧による動脈硬化リスク
-   - 睡眠時間や特記メモと血圧変動の臨床的関連
+   - 処方薬との適合性や睡眠時間・特記メモとの臨床的関連
    - 専門医としての総合コメント
 2. 🥗 【管理栄養士 アヤ の栄養・食事処方】:
    - PFCバランス（特に脂質比率とタンパク質充足度）の評価
