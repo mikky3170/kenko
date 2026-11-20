@@ -1,4 +1,4 @@
-<!-- [稼働Ver 作業版 Rev.17] v1.4.3更新・昼食デフォルト家食統一・スマホトレイCSSはみ出し完全防護 -->
+<!-- [稼働Ver 作業版 Rev.18] v1.5.0更新・メニュー名短縮(ラーメン/味噌汁等)・チーズ/明太子追加・味噌汁2択化(汁半分/普通)・代表ファイルバージョン一元化 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -57,7 +57,7 @@
     .brand-title { font-size: 1.0rem; font-weight: 900; color: #ffffff; white-space: nowrap; display: flex; align-items: center; gap: 3px; letter-spacing: 0.3px; }
     .brand-title span { color: var(--accent-blue); }
 
-    /* バージョンバッジ（代表ファイル1箇所集中：v1.4.3） */
+    /* バージョンバッジ（代表ファイル1箇所集中管理：v1.5.0） */
     .app-version-badge {
       font-size: 0.68rem; font-weight: 800; color: var(--accent-blue);
       border: 1px solid #0284c7; background: rgba(2, 132, 199, 0.18);
@@ -317,8 +317,9 @@
     .chip-btn.selected-item { background: rgba(56, 189, 248, 0.2); border-color: var(--accent-blue); color: #bae6fd; font-weight: 700; }
 
     .salt-badge { font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: 700; white-space: nowrap; }
-    .salt-badge-miso-half { background: rgba(251, 191, 36, 0.2); color: #fde047; }
-    .salt-badge-miso-none { background: rgba(52, 211, 153, 0.2); color: #86efac; }
+    .salt-badge-miso-half { background: rgba(52, 211, 153, 0.2); color: #86efac; border: 1px solid rgba(52,211,153,0.4); }
+    .salt-badge-miso-normal { background: rgba(251, 191, 36, 0.25); color: #fbbf24; border: 1px solid rgba(251,191,36,0.5); }
+    .salt-badge-miso-none { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
     .salt-badge-natto-half { background: rgba(192, 132, 252, 0.2); color: #e9d5ff; }
     .salt-badge-noodle-soup { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; }
 
@@ -331,7 +332,6 @@
     }
     .tray-item:last-child { margin-bottom: 0; }
     
-    /* トレイ上部：料理名と量ボタン（少・普・多・✕）のスマホ崩れ防止 */
     .tray-item-top {
       display: flex; justify-content: space-between; align-items: center; gap: 4px; flex-wrap: wrap;
     }
@@ -339,7 +339,6 @@
       font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; flex: 1; min-width: 110px;
     }
     
-    /* トレイ下部：サブメニュー行のはみ出し・改行落ち完全防護CSS */
     .tray-item-sub-row {
       display: flex; justify-content: space-between; align-items: center; gap: 6px;
       background: rgba(8, 12, 22, 0.4); padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(40, 54, 84, 0.6);
@@ -499,7 +498,7 @@
     .evidence-table th, .evidence-table td { border: 1px solid var(--border); padding: 5px 6px; text-align: left; }
     .evidence-table th { background: #080c16; color: var(--accent-blue); font-weight: 700; }
 
-    /* スマート画面内トースト通知（スマホ対応） */
+    /* スマート画面内トースト通知 */
     .smart-toast {
       position: fixed; top: 12px; left: 50%; transform: translateX(-50%) translateY(-100px);
       max-width: 420px; width: 92%; background: rgba(15, 23, 42, 0.98); border: 1px solid var(--accent-blue);
@@ -512,7 +511,7 @@
     .smart-toast-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px; font-size: 0.78rem; font-weight: 800; color: var(--accent-blue); }
     .smart-toast-body { font-size: 0.74rem; color: var(--text-main); line-height: 1.4; }
 
-    /* 📱 超薄型 2行スマート・テンキーPad（数字専用・スマホ最適化） */
+    /* 📱 超薄型 2行スマート・テンキーPad */
     #smartNumpadWrap {
       position: fixed; bottom: 0; left: 0; right: 0;
       background: rgba(11, 17, 33, 0.98); backdrop-filter: blur(12px);
@@ -586,7 +585,7 @@
 </head>
 <body>
 
-<!-- 画面内スマート・トースト通知コンテナ（スマホ対応） -->
+<!-- 画面内スマート・トースト通知コンテナ -->
 <div id="smartToastContainer" class="smart-toast" onclick="hideSmartToast()">
   <div class="smart-toast-header">
     <span id="toastTitle">🩺 Dr.ケンからのスマート見守り</span>
@@ -595,14 +594,14 @@
   <div class="smart-toast-body" id="toastBody">深呼吸をして目を休めましょう。</div>
 </div>
 
-<!-- ① 上部固定バー（タイトル・バージョン一元管理バッジ v1.4.3・ナビ・日付・水分補給） -->
+<!-- ① 上部固定バー（タイトル・バージョン一元管理バッジ v1.5.0・ナビ・日付・水分補給） -->
 <header id="topBarWrap">
   <div class="top-bar-inner">
     
     <div class="top-row-1">
       <div class="brand-wrap">
         <div class="brand-title">🩺 <span>健康管理くん</span></div>
-        <span class="app-version-badge" id="appVersionBadge">v1.4.3</span>
+        <span class="app-version-badge" id="appVersionBadge">v1.5.0</span>
       </div>
       <nav class="nav-tabs">
         <button class="tab-btn active" data-tab="inputTab" onclick="switchTab('inputTab')">✍️ 入力</button>
@@ -718,7 +717,7 @@
                   </div>
                   <div class="chip-group" id="m_chips_soup"></div>
 
-                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・焼き鳥・卵・小鉢)</div>
+                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・焼き鳥・卵・チーズ・明太子・小鉢)</div>
                   <div class="chip-group" id="m_chips_side"></div>
 
                   <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; margin-top:3px;">☕ 飲料</div>
@@ -757,7 +756,7 @@
             </div>
           </div>
 
-          <!-- ☀️ 昼スロット（デフォルト家食に統一） -->
+          <!-- ☀️ 昼スロット -->
           <div class="card" id="slot-lunch">
             <div class="card-header has-bottom-border" onclick="toggleSlotCard('lunch')">
               <h2 class="card-title">☀️ 昼の記録</h2>
@@ -807,7 +806,7 @@
                   </div>
                   <div class="chip-group" id="l_chips_soup"></div>
 
-                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・焼き鳥・卵・小鉢)</div>
+                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・焼き鳥・卵・チーズ・明太子・小鉢)</div>
                   <div class="chip-group" id="l_chips_side"></div>
 
                   <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; margin-top:3px;">☕ 飲料</div>
@@ -877,7 +876,7 @@
                   </div>
                   <div class="chip-group" id="d_chips_soup"></div>
 
-                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・焼き鳥・卵・小鉢)</div>
+                  <div style="font-size:0.72rem; color:var(--accent-rose); font-weight:700; margin-top:3px;">🥩 おかず (刺身・肉・焼き鳥・卵・チーズ・明太子・小鉢)</div>
                   <div class="chip-group" id="d_chips_side"></div>
 
                   <div style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700; margin-top:3px;">☕ 飲料</div>
@@ -1053,7 +1052,7 @@
 
         </div>
 
-        <!-- 右側：バディチャット ＆ 今日のひとことパネル -->
+        <!-- 右側：バディチャット ＆ 今日のひとことパネル（シンプル性重視・Gemini欄は置かない） -->
         <aside class="desktop-side-panel">
           
           <div class="assistant-card">
@@ -1132,11 +1131,11 @@
                 <button class="faq-jump-btn" onclick="navigateTo('guideTab', 'guideCare_face')">📖 図解と詳しい解説を見る →</button>
               </div>
 
-              <button class="quick-faq-btn" onclick="toggleFaq('faq1')">▶ 🍜 麺類のスープを残した時の塩分は？</button>
-              <div class="quick-faq-ans" id="faq1">スープを残すだけで塩分の約60%（約2〜3g）をカットできます。本ツールは「つゆ飲まない」前提の数値に自動計算されます。</div>
+              <button class="quick-faq-btn" onclick="toggleFaq('faq1')">▶ 🍲 味噌汁の塩分（汁半分 vs 普通）</button>
+              <div class="quick-faq-ans" id="faq1">自分で作って汁を半分残した時は【汁半分(0.6g)】、奥様が作られた時や外食・定食は【普通(1.2g)】を選択してください。トレイでワンタップ切り替え可能です。</div>
 
-              <button class="quick-faq-btn" onclick="toggleFaq('faq2')">▶ 🥩 ステーキ・ハンバーグのサイズ目安は？</button>
-              <div class="quick-faq-ans" id="faq2">【ステーキ】少=120g / 普=200g(標準1枚) / 多=350g<br>【ハンバーグ】少=120g / 普=200g / 多=300g<br>【とんかつ】少=ハーフ / 普=1枚 / 多=大判1枚</div>
+              <button class="quick-faq-btn" onclick="toggleFaq('faq2')">▶ 🧀 チーズや明太子のポーションは？</button>
+              <div class="quick-faq-ans" id="faq2">【チーズ】少=10g / 普=20g(スライス1枚) / 多=40g<br>【明太子】少=一口(12g) / 普=半腹(25g) / 多=1本(50g)<br>明太子は塩分が高いため「少」がおすすめです。</div>
 
               <button class="quick-faq-btn" onclick="toggleFaq('faq3')">▶ 💊 お薬を飲み忘れた時は？</button>
               <div class="quick-faq-ans" id="faq3">気づいた時点で主治医の指示通り服用するか、次回チェックで記録してください。2回分を一度に飲むのは厳禁です。</div>
@@ -1264,7 +1263,7 @@
           <div class="grid-3">
             <div>
               <label class="form-label">期日</label>
-              <input type="date" id="prof_targetDate_1" class="form-control" value="2025-06-30" onchange="saveProfileSettings()">
+              <input type="date" id="prof_targetDate_1" class="form-control" value="2026-11-20" onchange="saveProfileSettings()">
             </div>
             <div>
               <label class="form-label">目標体重 (kg)</label>
@@ -1327,7 +1326,7 @@
         <div class="chip-group" id="prof_care_chips">
           <div class="chip-btn selected-item" data-val="高血圧" onclick="toggleProfileCare(this)">☑ 高血圧 (減塩・血圧最優先)</div>
           <div class="chip-btn selected-item" data-val="脂質異常症" onclick="toggleProfileCare(this)">☑ 脂質異常症 (油物注意)</div>
-          <div class="chip-btn" data-val="痛風・高尿酸血症" onclick="toggleProfileCare(this)">□ 痛風 (ビール/ホルモン注意)</div>
+          <div class="chip-btn" data-val="痛風・高尿酸血症" onclick="toggleProfileCare(this)">□ 痛風 (ビール/ホルモン/明太子注意)</div>
           <div class="chip-btn" data-val="糖尿病・血糖値" onclick="toggleProfileCare(this)">□ 糖尿病 (糖質注意)</div>
           <div class="chip-btn" data-val="脂肪肝・肝機能" onclick="toggleProfileCare(this)">□ 脂肪肝 (休肝日)</div>
         </div>
@@ -1409,7 +1408,7 @@
           <button class="btn btn-outline" style="padding:2px 8px; font-size:0.7rem;" onclick="resetMenusToDefault()">↺ 初期値に戻す</button>
         </div>
         <div style="font-size:0.71rem; color:var(--text-muted); margin-top:3px; margin-bottom:5px;">
-          ※各時間帯の表示・非表示を設定できます。基準値（kcal・塩分）は誤操作防止のため安全にロック（閲覧専用）されています。
+          ※各時間帯の表示・非表示を設定できます。短縮名称・味噌汁・チーズ・明太子を完全網羅。基準値（kcal・塩分）は誤操作防止のため安全にロック（閲覧専用）されています。
         </div>
         <div class="menu-master-scroll">
           <table class="settings-table">
@@ -1488,7 +1487,7 @@
 
       <section class="guide-section">
         <h2 class="guide-title">🧭 （２）毎日の操作手順（生活リズムに合わせた1分ルーティン）</h2>
-        <div class="guide-lead">1日に何度も長考する必要はありません。生活の節目（朝・間食・昼・晩・就寝前）に1分以内でタップするだけです。オートセーブされるため、タブを閉じても消えません。就寝前にメモ欄へ一言入れておくと、診察レポートやAIカンファレンスにも反映されます。</div>
+        <div class="guide-lead">1日に何度も長考する必要はありません。生活の節目（朝・間食・昼・晩・就寝前）に1分以内でタップするだけです。オートセーブされるため、タブを閉じても消えません。就寝前にメモ欄へ一言入れておくと、PCビューワーの診察レポートやAIカンファレンスにも反映されます。</div>
       </section>
 
       <section class="guide-section">
@@ -1516,7 +1515,7 @@
             <div class="char-name">Dr. ケン（Ken）</div>
             <div class="char-role">循環器内科専門医 / 臨床高血圧学会認定医</div>
             <div class="char-desc">
-              「日々の血圧や体重が1〜2kg変動しても慌てる必要はありません。大切なのは<b>『7日間移動平均線（SMA7）』</b>と<b>『脈圧（血管のしなやかさ）』</b>です。頭痛や発熱などの体調変化もメモに残していただければ、多角的に見守ります。」
+              「日々の血圧や体重が1〜2kg変動しても慌てる必要はありません。大切なのは<b>『7日間移動平均線（SMA7）』</b>と<b>『脈圧（血管のしなやかさ）』</b>です。奥様の味噌汁や外食時は『普通(1.2g)』、自分で具だくさんにした時は『汁半分(0.6g)』と割り切って選んでいただければ、正確にリスクを評価します。」
             </div>
           </div>
         </div>
@@ -1527,7 +1526,7 @@
             <div class="char-name">管理栄養士 アヤ（Aya）</div>
             <div class="char-role">臨床病態栄養指導士 / 食習慣コーチ</div>
             <div class="char-desc">
-              「ラーメンやステーキ、ハンバーグやお酒も大切な楽しみです！卵料理（生卵・ゆで卵）に加え、焼き鳥（もも・レバー・ささみ・皮）や果物、ヨーグルトも選択できるようになりました。ぴったりな品がない時もメモ欄に補足を書いていただければしっかり拾います！」
+              「ラーメンやお肉、お酒も人生の大切な楽しみです！チーズや明太子も仲間入りしました。PCビューワー側では全食品辞書を見ながら『今日食べたこの定食は何を登録すればいい？』とGemini AIにいつでも自由相談できますので、ぜひ活用してくださいね◎」
             </div>
           </div>
         </div>
@@ -1670,11 +1669,11 @@
   </div>
 </footer>
 
-<!-- 📱 超薄型 2行スマート・テンキーPad（数字専用・スマホ最適化） -->
+<!-- 📱 超薄型 2行スマート・テンキーPad -->
 <div id="smartNumpadWrap">
   <div class="numpad-header">
     <div class="numpad-title-tag">
-      <span>⌨️</span> <span id="numpadInputLabel">入力欄</span>:
+      <span>⌨️</span> <span id="numpadInputLabel">入力項目</span>:
       <span class="numpad-val-preview" id="numpadValPreview">--</span>
     </div>
     <button class="btn-numpad-close" onclick="closeSmartNumpad()">✕ 閉じる</button>
