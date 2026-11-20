@@ -1,4 +1,4 @@
-<!-- [稼働Ver 作業版 Rev.18] v1.5.0更新・メニュー名短縮(ラーメン/味噌汁等)・チーズ/明太子追加・味噌汁2択化(汁半分/普通)・代表ファイルバージョン一元化 -->
+<!-- [稼働Ver 作業版 Rev.19] お薬マスタ二重名称(表示名/正式薬剤名)対応・休薬履歴保護UI・代表ファイルバージョン一元化 -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -57,7 +57,7 @@
     .brand-title { font-size: 1.0rem; font-weight: 900; color: #ffffff; white-space: nowrap; display: flex; align-items: center; gap: 3px; letter-spacing: 0.3px; }
     .brand-title span { color: var(--accent-blue); }
 
-    /* バージョンバッジ（代表ファイル1箇所集中管理：v1.5.0） */
+    /* バージョンバッジ（代表ファイル1箇所集中管理：v1.5.1） */
     .app-version-badge {
       font-size: 0.68rem; font-weight: 800; color: var(--accent-blue);
       border: 1px solid #0284c7; background: rgba(2, 132, 199, 0.18);
@@ -594,14 +594,14 @@
   <div class="smart-toast-body" id="toastBody">深呼吸をして目を休めましょう。</div>
 </div>
 
-<!-- ① 上部固定バー（タイトル・バージョン一元管理バッジ v1.5.0・ナビ・日付・水分補給） -->
+<!-- ① 上部固定バー（タイトル・バージョン一元管理バッジ v1.5.1・ナビ・日付・水分補給） -->
 <header id="topBarWrap">
   <div class="top-bar-inner">
     
     <div class="top-row-1">
       <div class="brand-wrap">
         <div class="brand-title">🩺 <span>健康管理くん</span></div>
-        <span class="app-version-badge" id="appVersionBadge">v1.5.0</span>
+        <span class="app-version-badge" id="appVersionBadge">v1.5.1</span>
       </div>
       <nav class="nav-tabs">
         <button class="tab-btn active" data-tab="inputTab" onclick="switchTab('inputTab')">✍️ 入力</button>
@@ -1332,25 +1332,27 @@
         </div>
       </div>
 
-      <!-- マイお薬・サプリ設定 -->
+      <!-- マイお薬・サプリ設定（表示名＆正式薬剤名・二重名称対応・休薬過去保護） -->
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <h2 class="card-title">💊 マイお薬・サプリ設定（時間帯別マスタ）</h2>
           <button class="btn btn-outline" style="padding:2px 8px; font-size:0.7rem;" onclick="addMedItemRow()">＋ 薬を追加</button>
         </div>
-        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; margin-bottom:6px;">
-          ※飲む時間帯（朝・昼・晩・就）にチェックを入れて保存すると、日々の各入力欄にはその薬だけがスマートに表示されます。
+        <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; margin-bottom:6px; line-height:1.45;">
+          ※日々の入力画面には短い<b>「表示名」</b>だけがコンパクトに表示され、Gemini AIや医師提出レポートには<b>「正式な薬剤名」</b>が正確に連携されます。<br>
+          ※処方が変わって飲まなくなった古い薬は、行を削除せずに<b>飲む時間帯（朝昼晩就）のチェックをすべて外す</b>ことで、入力画面から隠しつつ過去の記録履歴を100%安全に保持できます。
         </div>
-        <div class="menu-master-scroll" style="max-height:260px;">
+        <div class="menu-master-scroll" style="max-height:280px;">
           <table class="settings-table">
             <thead>
               <tr>
-                <th style="width: auto;">お薬・サプリ名 (規格・mg)</th>
-                <th style="width: 32px;">朝</th>
-                <th style="width: 32px;">昼</th>
-                <th style="width: 32px;">晩</th>
-                <th style="width: 32px;">就</th>
-                <th style="width: 36px;">削除</th>
+                <th style="width: 100px;">表示名 (チップ用)</th>
+                <th style="width: auto;">正式な薬剤名・規格 (AI・カルテ用)</th>
+                <th style="width: 30px;">朝</th>
+                <th style="width: 30px;">昼</th>
+                <th style="width: 30px;">晩</th>
+                <th style="width: 30px;">就</th>
+                <th style="width: 34px;">削除</th>
               </tr>
             </thead>
             <tbody id="medMasterTableBody"></tbody>
