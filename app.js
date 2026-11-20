@@ -1,4 +1,5 @@
-// [稼働Ver 作業版 Rev.18] メニュー名短縮(ラーメン/味噌汁等)・チーズ/明太子追加・味噌汁2択化(汁半分/普通)・自動マイグレーション完全同期
+
+// [稼働Ver 作業版 Rev.20] バックアップ復元時の新処方保護スマートマージ・お薬二重名称対応・過去服薬スコア完全保護
 
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
 const MASTER_KEY_SETTINGS = 'health_kun_data_master_settings';
@@ -311,12 +312,19 @@ const DEFAULT_50_MENUS = [
   { id: 50, cat: "夜食", name: "おつまみ・ナッツ",   m: false, l: false, d: false, ln: true,  cal: 160, salt: 0.6 }
 ];
 
+// 💊 表示名（チップ用）と 正式薬剤名・規格（Gemini・カルテ用）の2層マスタ初期値
 const DEFAULT_MEDS = [
-  { name: "降圧剤", m: true, l: false, d: false, n: false },
-  { name: "脂質異常症薬", m: true, l: false, d: false, n: false },
-  { name: "EPA・DHA (1000mg)", m: true, l: false, d: true, n: false },
-  { name: "マルチビタミン (1日分)", m: true, l: false, d: false, n: false },
-  { name: "胃薬・整腸剤", m: false, l: true, d: true, n: false }
+  { name: "降圧剤", formalName: "ジルムロ配合錠「武田テバ」", m: true, l: false, d: false, n: false },
+  { name: "配合錠", formalName: "キャブピリン配合錠", m: true, l: false, d: false, n: false },
+  { name: "脂質薬", formalName: "アトルバスタチン錠OD10mg「トーワ」", m: true, l: false, d: false, n: false },
+  { name: "心臓・降圧薬", formalName: "カルベジロール錠2.5mg「サワイ」", m: true, l: false, d: true, n: false },
+  { name: "フィッシュオイル", formalName: "スーパーフィッシュオイルEPA・DHA 1.1g", m: true, l: false, d: true, n: false },
+  { name: "ビタミンD", formalName: "Super D 1000IU 0.245g", m: true, l: false, d: false, n: false },
+  { name: "マルチビタミン", formalName: "スーパーマルチビタミン＆ミネラル 1.515g", m: true, l: false, d: false, n: false },
+  // 過去処方（休薬・チェック全解除：履歴保護用）
+  { name: "降圧剤(旧)", formalName: "アジルサルタンOD錠20mg「日新」", m: false, l: false, d: false, n: false },
+  { name: "血液サラサラ(旧)", formalName: "バイアスピリン錠100mg", m: false, l: false, d: false, n: false },
+  { name: "胃薬(旧)", formalName: "タケキャブOD錠10mg", m: false, l: false, d: false, n: false }
 ];
 
 const DEFAULT_PROFILE = {
@@ -379,7 +387,7 @@ function getCurrentTimeString() {
 // 代表ファイル（index.html）からバージョンを取得（フォールバック付き）
 function getAppVersion() {
   const badge = document.getElementById('appVersionBadge');
-  return badge ? badge.textContent.trim() : 'v1.5.0';
+  return badge ? badge.textContent.trim() : 'v1.5.1';
 }
 
 function openDatePicker() {
@@ -507,45 +515,95 @@ function rotateTodayHealthTip() {
   displayHealthTipByIndex(currentTipIndex);
 }
 
-// 過去バージョン互換・短縮メニュー名・新メニュー（チーズ・明太子・味噌汁2択）自動マイグレーション
+// 過去バージョン互換・短縮メニュー名・新メニュー（チーズ・明太子・味噌汁2択）・新お薬正式名自動マイグレーション
 function migratePastVersions() {
   if (!localStorage.getItem(MASTER_KEY_RECORDS)) {
-    for (let v = 17; v >= 1; v--) {
+    for (let v = 19; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_records_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_RECORDS, past); break; }
     }
   }
   if (!localStorage.getItem(MASTER_KEY_SETTINGS)) {
-    for (let v = 17; v >= 1; v--) {
+    for (let v = 19; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_settings_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_SETTINGS, past); break; }
     }
   }
   if (!localStorage.getItem(MASTER_KEY_MENUS)) {
-    for (let v = 17; v >= 1; v--) {
+    for (let v = 19; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_menus_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_MENUS, past); break; }
     }
   }
   if (!localStorage.getItem(MASTER_KEY_MEDS)) {
-    for (let v = 17; v >= 1; v--) {
+    for (let v = 19; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_meds_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_MEDS, past); break; }
     }
   }
   if (!localStorage.getItem(MASTER_KEY_PROFILE)) {
-    for (let v = 17; v >= 1; v--) {
+    for (let v = 19; v >= 1; v--) {
       const past = localStorage.getItem(`health_kun_profile_v${v}`);
       if (past) { localStorage.setItem(MASTER_KEY_PROFILE, past); break; }
     }
   }
 
+  // お薬マスタの二重名称（formalName）マイグレーション
+  const rawMed = localStorage.getItem(MASTER_KEY_MEDS);
+  if (rawMed) {
+    try {
+      let existingMeds = JSON.parse(rawMed);
+      let modified = false;
+
+      // 既存のformalName未設定項目に正式名を紐付け
+      const formalMap = {
+        "降圧剤": "ジルムロ配合錠「武田テバ」",
+        "脂質異常症薬": "アトルバスタチン錠OD10mg「トーワ」",
+        "脂質薬": "アトルバスタチン錠OD10mg「トーワ」",
+        "EPA・DHA (1000mg)": "スーパーフィッシュオイルEPA・DHA 1.1g",
+        "フィッシュオイル": "スーパーフィッシュオイルEPA・DHA 1.1g",
+        "マルチビタミン (1日分)": "スーパーマルチビタミン＆ミネラル 1.515g",
+        "マルチビタミン": "スーパーマルチビタミン＆ミネラル 1.515g",
+        "胃薬・整腸剤": "タケキャブOD錠10mg",
+        "胃薬": "タケキャブOD錠10mg"
+      };
+
+      existingMeds.forEach(m => {
+        if (!m.formalName && formalMap[m.name]) {
+          m.formalName = formalMap[m.name];
+          modified = true;
+        } else if (!m.formalName) {
+          m.formalName = m.name;
+        }
+      });
+
+      // 新処方（キャブピリン、カルベジロール、ビタミンD等）が未登録なら追加
+      const ensureMed = (item) => {
+        if (!existingMeds.some(x => x.name === item.name || (item.formalName && x.formalName === item.formalName))) {
+          existingMeds.push(item);
+          modified = true;
+        }
+      };
+
+      ensureMed({ name: "配合錠", formalName: "キャブピリン配合錠", m: true, l: false, d: false, n: false });
+      ensureMed({ name: "心臓・降圧薬", formalName: "カルベジロール錠2.5mg「サワイ」", m: true, l: false, d: true, n: false });
+      ensureMed({ name: "ビタミンD", formalName: "Super D 1000IU 0.245g", m: true, l: false, d: false, n: false });
+      ensureMed({ name: "降圧剤(旧)", formalName: "アジルサルタンOD錠20mg「日新」", m: false, l: false, d: false, n: false });
+      ensureMed({ name: "血液サラサラ(旧)", formalName: "バイアスピリン錠100mg", m: false, l: false, d: false, n: false });
+      ensureMed({ name: "胃薬(旧)", formalName: "タケキャブOD錠10mg", m: false, l: false, d: false, n: false });
+
+      if (modified) {
+        localStorage.setItem(MASTER_KEY_MEDS, JSON.stringify(existingMeds));
+      }
+    } catch (e) {}
+  }
+
+  // メニューマスタのマイグレーション
   const rawM = localStorage.getItem(MASTER_KEY_MENUS);
   if (rawM) {
     try {
       let existing = JSON.parse(rawM);
 
-      // 名称の短縮リネーム・正規化
       const renameMap = {
         "ラーメン・中華麺": "ラーメン",
         "味噌汁(豆腐/わかめ)": "味噌汁",
@@ -567,38 +625,20 @@ function migratePastVersions() {
       };
 
       existing.forEach(item => {
-        if (renameMap[item.name]) {
-          item.name = renameMap[item.name];
-        }
+        if (renameMap[item.name]) item.name = renameMap[item.name];
       });
 
-      // 味噌汁の基準値調整（汁半分 40kcal / 0.6g を基準）
       const misoIdx = existing.findIndex(x => x.name === "味噌汁");
       if (misoIdx !== -1) {
         existing[misoIdx].cal = 40;
         existing[misoIdx].salt = 0.6;
       }
 
-      // 新メニューの自動マージ（チーズ、明太子）
       if (!existing.some(x => x.name === "チーズ")) {
         existing.push({ id: 65, cat: "おかず", name: "チーズ", m: true, l: true, d: true, ln: true, cal: 63, salt: 0.6 });
       }
       if (!existing.some(x => x.name === "明太子")) {
         existing.push({ id: 66, cat: "おかず", name: "明太子", m: true, l: true, d: true, ln: true, cal: 30, salt: 1.4 });
-      }
-
-      // 既存パーツの補完
-      if (!existing.some(x => x.name === "焼き鳥・串焼き")) {
-        existing.push({ id: 61, cat: "おかず", name: "焼き鳥・串焼き", m: false, l: true, d: true, ln: true, cal: 160, salt: 1.2 });
-      }
-      if (!existing.some(x => x.name === "サラダチキン")) {
-        existing.push({ id: 64, cat: "おかず", name: "サラダチキン", m: false, l: true, d: true, ln: true, cal: 115, salt: 1.0 });
-      }
-      if (!existing.some(x => x.name === "ヨーグルト")) {
-        existing.push({ id: 63, cat: "おかず", name: "ヨーグルト", m: true, l: true, d: false, ln: false, cal: 65, salt: 0.1 });
-      }
-      if (!existing.some(x => x.name === "果物・バナナ")) {
-        existing.push({ id: 62, cat: "間食", name: "果物・バナナ", m: true, l: true, d: false, ln: false, cal: 80, salt: 0.0 });
       }
 
       const orderMap = {};
@@ -940,7 +980,7 @@ function saveProfileSettings() {
     {
       date: document.getElementById('prof_targetDate_3').value || "",
       targetWeight: parseFloat(document.getElementById('prof_targetWeight_3').value) || null,
-      targetSteps: parseInt(document.getElementById('prof_targetSteps_3').value, 10) || null
+      targetSteps: parseInt(document.getElementById('prof_targetSteps_2').value, 10) || null
     }
   ];
 
@@ -1001,9 +1041,11 @@ function saveMedSettings() {
   const newList = [];
   rows.forEach(tr => {
     const name = tr.querySelector('.in-med-name').value.trim();
+    const formalName = tr.querySelector('.in-med-formal').value.trim();
     if (name) {
       newList.push({
         name: name,
+        formalName: formalName || name,
         m: tr.querySelector('.in-med-m').checked,
         l: tr.querySelector('.in-med-l').checked,
         d: tr.querySelector('.in-med-d').checked,
@@ -1025,7 +1067,8 @@ function renderMedSettingsTable() {
   medMaster.forEach(med => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input type="text" class="table-input in-med-name" value="${escapeHtml(med.name)}"></td>
+      <td><input type="text" class="table-input in-med-name" value="${escapeHtml(med.name)}" placeholder="例: 降圧剤"></td>
+      <td><input type="text" class="table-input in-med-formal" value="${escapeHtml(med.formalName || med.name)}" placeholder="例: ジルムロ配合錠「武田テバ」"></td>
       <td class="center"><input type="checkbox" class="in-med-m" ${med.m ? 'checked' : ''}></td>
       <td class="center"><input type="checkbox" class="in-med-l" ${med.l ? 'checked' : ''}></td>
       <td class="center"><input type="checkbox" class="in-med-d" ${med.d ? 'checked' : ''}></td>
@@ -1040,7 +1083,8 @@ function addMedItemRow() {
   const tbody = document.getElementById('medMasterTableBody');
   const tr = document.createElement('tr');
   tr.innerHTML = `
-    <td><input type="text" class="table-input in-med-name" placeholder="例: 降圧剤 (朝1錠)"></td>
+    <td><input type="text" class="table-input in-med-name" placeholder="例: 降圧剤"></td>
+    <td><input type="text" class="table-input in-med-formal" placeholder="例: ジルムロ配合錠「武田テバ」"></td>
     <td class="center"><input type="checkbox" class="in-med-m" checked></td>
     <td class="center"><input type="checkbox" class="in-med-l"></td>
     <td class="center"><input type="checkbox" class="in-med-d"></td>
@@ -1075,6 +1119,9 @@ function rebuildMedChipsUI() {
       const isChk = (currentMeds[slot] || []).includes(med.name);
       chip.className = `med-chip ${isChk ? 'checked' : ''}`;
       chip.textContent = med.name;
+      if (med.formalName && med.formalName !== med.name) {
+        chip.title = `正式名: ${med.formalName}`;
+      }
       chip.onclick = () => {
         chip.classList.toggle('checked');
         if (chip.classList.contains('checked')) {
@@ -1966,6 +2013,7 @@ function updateLiveSummary() {
   } else {
     const pointPerSlot = 30 / activeMedSlots.length;
     activeMedSlots.forEach(slot => {
+      // 現在の処方でその時間帯に設定されている有効な薬
       const targetMeds = medMaster.filter(m => {
         if (slot === 'morning') return m.m;
         if (slot === 'lunch') return m.l;
@@ -1974,12 +2022,21 @@ function updateLiveSummary() {
         return false;
       }).map(m => m.name);
 
+      const slotRecord = allRecords[activeDate]?.[slot] || {};
+      const checkedList = currentMeds[slot] || [];
+
       if (targetMeds.length === 0) {
         score += pointPerSlot;
       } else {
-        const checkedList = currentMeds[slot] || [];
         const allTaken = targetMeds.every(name => checkedList.includes(name));
-        if (allTaken) score += pointPerSlot;
+        if (allTaken) {
+          score += pointPerSlot;
+        } else if (slotRecord.time && checkedList.length > 0) {
+          // 過去履歴保護フォールバック:
+          // 既にスロット保存が完了しており、かつ何らかの薬を服用記録している場合、
+          // 後からマスタに新薬が追加されたことによる未チェック減点を完全に防止し、当時の満点を維持
+          score += pointPerSlot;
+        }
       }
     });
   }
@@ -2540,8 +2597,37 @@ function importFullJSON(event) {
         localStorage.setItem(MASTER_KEY_PROFILE, JSON.stringify(userProfile));
       }
 
+      // 【新処方保護スマートマージ】古いバックアップを復元しても新薬が勝手に消えないフェイルセーフ
       if (data.meds && Array.isArray(data.meds)) {
-        medMaster = data.meds;
+        let importedMeds = data.meds;
+        const formalMap = {
+          "降圧剤": "ジルムロ配合錠「武田テバ」",
+          "脂質異常症薬": "アトルバスタチン錠OD10mg「トーワ」",
+          "脂質薬": "アトルバスタチン錠OD10mg「トーワ」",
+          "EPA・DHA (1000mg)": "スーパーフィッシュオイルEPA・DHA 1.1g",
+          "フィッシュオイル": "スーパーフィッシュオイルEPA・DHA 1.1g",
+          "マルチビタミン (1日分)": "スーパーマルチビタミン＆ミネラル 1.515g",
+          "マルチビタミン": "スーパーマルチビタミン＆ミネラル 1.515g",
+          "胃薬・整腸剤": "タケキャブOD錠10mg",
+          "胃薬": "タケキャブOD錠10mg"
+        };
+        importedMeds.forEach(m => {
+          if (!m.formalName && formalMap[m.name]) {
+            m.formalName = formalMap[m.name];
+          } else if (!m.formalName) {
+            m.formalName = m.name;
+          }
+        });
+
+        // 古いバックアップにない新薬（キャブピリン、カルベジロール、ビタミンD等）を安全にマージ
+        DEFAULT_MEDS.forEach(defM => {
+          const exists = importedMeds.some(x => x.name === defM.name || (defM.formalName && x.formalName === defM.formalName));
+          if (!exists) {
+            importedMeds.push(JSON.parse(JSON.stringify(defM)));
+          }
+        });
+
+        medMaster = importedMeds;
         localStorage.setItem(MASTER_KEY_MEDS, JSON.stringify(medMaster));
       }
 
@@ -2625,7 +2711,7 @@ function importFullJSON(event) {
       const msg = `✅ 丸ごと復元が完了しました！\n\n` +
                   `・日次記録：${recordCount} 日分\n` +
                   `・表示中の日付：${activeDate}\n` +
-                  `・お薬・サプリ設定：${medMaster.length} 件\n` +
+                  `・お薬・サプリ設定：${medMaster.length} 件 (新処方スマート保護済)\n` +
                   `・プロファイル：${userProfile.age || ''} ${userProfile.gender || ''} (身長 ${userProfile.height || 172}cm)`;
       alert(msg);
 
@@ -2816,7 +2902,7 @@ function factoryResetAll() {
   localStorage.removeItem(MASTER_KEY_MEDS);
   localStorage.removeItem(MASTER_KEY_PROFILE);
 
-  for (let v = 1; v <= 17; v++) {
+  for (let v = 1; v <= 19; v++) {
     localStorage.removeItem(`health_kun_records_v${v}`);
     localStorage.removeItem(`health_kun_settings_v${v}`);
     localStorage.removeItem(`health_kun_menus_v${v}`);
