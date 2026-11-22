@@ -1,5 +1,3 @@
-// [稼働Ver 作業版 Rev.23] 過去日付における服薬実績の完全実線表示・同名新薬誤爆防止・休薬黄色点線完全撤廃
-
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
 const MASTER_KEY_SETTINGS = 'health_kun_data_master_settings';
 const MASTER_KEY_MENUS = 'health_kun_data_master_menus';
@@ -592,7 +590,6 @@ window.addEventListener('DOMContentLoaded', () => {
   renderProfileUI();
   renderMedSettingsTable();
   renderMenuMasterTable();
-  rebuildAllInputChips();
   applySettingsToUI();
 
   loadRecordIntoForm(activeDate);
@@ -617,11 +614,14 @@ function initSmartNumpadListeners() {
     input.addEventListener('click', () => openSmartNumpad(input));
   });
 
-  document.getElementById('mainScrollView').addEventListener('touchstart', (e) => {
+  const scrollEl = document.getElementById('mainScrollView');
+  const handleOutsideClose = (e) => {
     if (!e.target.closest('.smart-num-input') && !e.target.closest('#smartNumpadWrap')) {
       closeSmartNumpad();
     }
-  }, { passive: true });
+  };
+  scrollEl.addEventListener('touchstart', handleOutsideClose, { passive: true });
+  scrollEl.addEventListener('mousedown', handleOutsideClose);
 }
 
 function openSmartNumpad(inputEl) {
@@ -887,7 +887,7 @@ function saveProfileSettings() {
     {
       date: document.getElementById('prof_targetDate_3').value || "",
       targetWeight: parseFloat(document.getElementById('prof_targetWeight_3').value) || null,
-      targetSteps: parseInt(document.getElementById('prof_targetSteps_2').value, 10) || null
+      targetSteps: parseInt(document.getElementById('prof_targetSteps_3').value, 10) || null
     }
   ];
 
@@ -944,7 +944,7 @@ function loadMeds() {
 }
 
 // =========================================================
-// 💊 スマホ向けスリム化：服用中のお薬・服用タイミング設定テーブル
+// 💊 服用中のお薬・服用タイミング設定テーブル
 // =========================================================
 function renderMedSettingsTable() {
   const activeTbody = document.getElementById('medActiveTableBody');
@@ -1037,7 +1037,7 @@ function addMedItemRow() {
   rebuildMedChipsUI();
 }
 
-// 過去日付における服薬実績の完全実線表示 ＆ 新薬誤爆防止ロジック
+// 過去日付・当日日付のシンプルかつ完全な服薬チップ描画ロジック
 function rebuildMedChipsUI() {
   const isPastDate = (activeDate < getTodayString());
   const curDayRecord = allRecords[activeDate] || {};
@@ -1051,57 +1051,33 @@ function rebuildMedChipsUI() {
     const currentCheckedNames = currentMeds[slot] || [];
     const savedNamesInHistory = (curDayRecord[slot] && Array.isArray(curDayRecord[slot].meds)) ? curDayRecord[slot].meds : [];
 
-    // 現在服用中のアクティブなお薬
-    const activeSlotMeds = medMaster.filter(med => {
-      if (med.status !== 'active') return false;
-      if (slot === 'morning') return med.m;
-      if (slot === 'lunch') return med.l;
-      if (slot === 'dinner') return med.d;
-      if (slot === 'night') return med.n;
-      return false;
-    });
-
     const displayChips = [];
-    const renderedNamesSet = new Set();
 
     if (isPastDate) {
-      // 過去日付の場合：
-      // ① 当時実際に選択・服用されていた記録（savedNamesInHistory）を最優先で実線表示
+      // 過去の日付（確定カルテ）：その日の記録（meds）に保存されている文字をそのまま実線（緑）で表示
       savedNamesInHistory.forEach(savedName => {
-        const matchedMed = medMaster.find(m => m.name === savedName || (m.prevNames && m.prevNames.includes(savedName)));
-        const formalTitle = matchedMed ? (matchedMed.formalName || matchedMed.name) : savedName;
+        const isChecked = currentCheckedNames.includes(savedName);
         displayChips.push({
           displayName: savedName,
-          title: `当時の服薬記録: ${formalTitle}`,
-          isChecked: true, // 当時飲んでいたので必ず実線（選択済）
+          isChecked: isChecked,
           rawName: savedName
         });
-        renderedNamesSet.add(savedName);
       });
-
-      // ② 現在アクティブなお薬のうち、過去の記録に含まれていないもの（新設薬など）を未選択で並べる
-      activeSlotMeds.forEach(med => {
-        // 同名または過去名がすでに服用済として出ているなら、二重に新薬側を出さない（新薬誤爆防止）
-        const alreadyCovered = renderedNamesSet.has(med.name) || (med.prevNames && med.prevNames.some(p => renderedNamesSet.has(p)));
-        if (!alreadyCovered) {
-          const isUserChecked = currentCheckedNames.includes(med.name);
-          displayChips.push({
-            displayName: med.name,
-            title: `現在処方薬: ${med.formalName || med.name}`,
-            isChecked: isUserChecked, // 当時記録が無ければ未選択（グレー枠）
-            rawName: med.name
-          });
-          renderedNamesSet.add(med.name);
-        }
-      });
-
     } else {
-      // 今日・未来の日付の場合：現在服用中のアクティブ薬だけを表示
+      // 今日・未来の日付：現在マスタで「服用中（active）」のお薬のみを表示
+      const activeSlotMeds = medMaster.filter(med => {
+        if (med.status !== 'active') return false;
+        if (slot === 'morning') return med.m;
+        if (slot === 'lunch') return med.l;
+        if (slot === 'dinner') return med.d;
+        if (slot === 'night') return med.n;
+        return false;
+      });
+
       activeSlotMeds.forEach(med => {
         const isUserChecked = currentCheckedNames.includes(med.name);
         displayChips.push({
           displayName: med.name,
-          title: med.formalName || med.name,
           isChecked: isUserChecked,
           rawName: med.name
         });
@@ -1109,16 +1085,14 @@ function rebuildMedChipsUI() {
     }
 
     if (displayChips.length === 0) {
-      wrap.innerHTML = '<span style="font-size:0.7rem; color:var(--text-muted);">設定されたお薬・サプリはありません</span>';
+      wrap.innerHTML = '<span style="font-size:0.7rem; color:var(--text-muted);">' + (isPastDate ? '服薬記録なし' : '設定されたお薬・サプリはありません') + '</span>';
       return;
     }
 
     displayChips.forEach(chipData => {
       const chip = document.createElement('div');
-      // 余計な点線（inactive-history）や⏸️マークは完全撤廃し、選択されているものはすべて実線（checked）
       chip.className = `med-chip ${chipData.isChecked ? 'checked' : ''}`;
       chip.textContent = chipData.displayName;
-      if (chipData.title) chip.title = chipData.title;
 
       chip.onclick = () => {
         chip.classList.toggle('checked');
@@ -1140,23 +1114,14 @@ function rebuildMedChipsUI() {
 function checkAllMed(slot) {
   const isPastDate = (activeDate < getTodayString());
   const curDayRecord = allRecords[activeDate] || {};
-
   let targetNames = [];
 
   if (isPastDate) {
+    // 過去日付：当時の記録にあるお薬を全選択
     const saved = (curDayRecord[slot] && Array.isArray(curDayRecord[slot].meds)) ? curDayRecord[slot].meds : [];
     targetNames = [...saved];
-    medMaster.filter(med => {
-      if (med.status !== 'active') return false;
-      if (slot === 'morning') return med.m;
-      if (slot === 'lunch') return med.l;
-      if (slot === 'dinner') return med.d;
-      if (slot === 'night') return med.n;
-      return false;
-    }).forEach(m => {
-      if (!targetNames.includes(m.name)) targetNames.push(m.name);
-    });
   } else {
+    // 今日・未来：現在アクティブなお薬を全選択
     targetNames = medMaster.filter(med => {
       if (med.status !== 'active') return false;
       if (slot === 'morning') return med.m;
@@ -1953,7 +1918,7 @@ function loadRecordIntoForm(dateStr) {
   if (memoEl) memoEl.value = r.memo || '';
 
   updateCardCompletionStates(r);
-  rebuildMedChipsUI();
+  rebuildAllInputChips();
   updateLiveSummary();
 }
 
@@ -2022,40 +1987,54 @@ function updateLiveSummary() {
 
   let score = 20;
 
-  const activeMedSlots = [];
-  if (currentSettings.morning?.med) activeMedSlots.push('morning');
-  if (currentSettings.lunch?.med) activeMedSlots.push('lunch');
-  if (currentSettings.dinner?.med) activeMedSlots.push('dinner');
-  if (currentSettings.night?.med) activeMedSlots.push('night');
+  const isPastDate = (activeDate < getTodayString());
 
-  if (activeMedSlots.length === 0) {
-    score += 30;
+  if (isPastDate) {
+    // 過去日付の場合：当時の服薬記録が存在していれば満点
+    const curRec = allRecords[activeDate] || {};
+    const hasAnyMed = ['morning', 'lunch', 'dinner', 'night'].some(s => curRec[s]?.meds && curRec[s].meds.length > 0);
+    if (hasAnyMed) {
+      score += 30;
+    } else {
+      score += 30; // 薬設定がなかった日も減点しない
+    }
   } else {
-    const pointPerSlot = 30 / activeMedSlots.length;
-    activeMedSlots.forEach(slot => {
-      const targetMeds = medMaster.filter(m => {
-        if (m.status !== 'active') return false;
-        if (slot === 'morning') return m.m;
-        if (slot === 'lunch') return m.l;
-        if (slot === 'dinner') return m.d;
-        if (slot === 'night') return m.n;
-        return false;
-      }).map(m => m.name);
+    // 今日の場合：現在のアクティブ処方薬との照合
+    const activeMedSlots = [];
+    if (currentSettings.morning?.med) activeMedSlots.push('morning');
+    if (currentSettings.lunch?.med) activeMedSlots.push('lunch');
+    if (currentSettings.dinner?.med) activeMedSlots.push('dinner');
+    if (currentSettings.night?.med) activeMedSlots.push('night');
 
-      const slotRecord = allRecords[activeDate]?.[slot] || {};
-      const checkedList = currentMeds[slot] || [];
+    if (activeMedSlots.length === 0) {
+      score += 30;
+    } else {
+      const pointPerSlot = 30 / activeMedSlots.length;
+      activeMedSlots.forEach(slot => {
+        const targetMeds = medMaster.filter(m => {
+          if (m.status !== 'active') return false;
+          if (slot === 'morning') return m.m;
+          if (slot === 'lunch') return m.l;
+          if (slot === 'dinner') return m.d;
+          if (slot === 'night') return m.n;
+          return false;
+        }).map(m => m.name);
 
-      if (targetMeds.length === 0) {
-        score += pointPerSlot;
-      } else {
-        const allTaken = targetMeds.every(name => checkedList.includes(name));
-        if (allTaken) {
+        const slotRecord = allRecords[activeDate]?.[slot] || {};
+        const checkedList = currentMeds[slot] || [];
+
+        if (targetMeds.length === 0) {
           score += pointPerSlot;
-        } else if (slotRecord.time && checkedList.length > 0) {
-          score += pointPerSlot;
+        } else {
+          const allTaken = targetMeds.every(name => checkedList.includes(name));
+          if (allTaken) {
+            score += pointPerSlot;
+          } else if (slotRecord.time && checkedList.length > 0) {
+            score += pointPerSlot;
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   const glasses = parseInt(document.getElementById('topWaterText')?.textContent, 10) || 0;
@@ -2578,7 +2557,7 @@ function exportFullJSON() {
   URL.revokeObjectURL(url);
 }
 
-// 📂 スマホ本体への完全共通JSONインポート（透明な確認ダイアログ＆安全復元）
+// 📂 スマホ本体への完全共通JSONインポート
 function importFullJSON(event) {
   const file = event.target.files[0];
   if (!file) return;
