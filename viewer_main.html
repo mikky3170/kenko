@@ -1,0 +1,848 @@
+<!-- [稼働Ver 作業版 Rev.10] PC プロフェッショナル・ビューワー＆臨床カルテ (viewer_main.html) -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>健康管理くん - PCプロフェッショナル・ビューワー＆臨床カルテ</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-body: #0b0f19;
+      --bg-card: #121927;
+      --bg-card-sub: #182235;
+      --bg-input: #1d283f;
+      --border: #283654;
+      --border-focus: #38bdf8;
+      --text-main: #f1f5f9;
+      --text-muted: #8b9bb4;
+      --accent-blue: #38bdf8;
+      --accent-green: #34d399;
+      --accent-rose: #fb7185;
+      --accent-amber: #fbbf24;
+      --accent-purple: #c084fc;
+      --radius: 10px;
+      --transition: all 0.15s ease;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    body { background-color: var(--bg-body); color: var(--text-main); line-height: 1.45; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* 上部ヘッダー */
+    header {
+      background: rgba(15, 23, 42, 0.98); border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100; backdrop-filter: blur(8px);
+      padding: 10px 20px;
+    }
+    .header-inner {
+      max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    }
+    .brand-box { display: flex; align-items: center; gap: 10px; }
+    .brand-title { font-size: 1.15rem; font-weight: 900; color: #ffffff; letter-spacing: 0.5px; }
+    .brand-title span { color: var(--accent-blue); }
+    .viewer-badge {
+      font-size: 0.72rem; font-weight: 800; background: rgba(56, 189, 248, 0.15);
+      border: 1px solid var(--accent-blue); color: var(--accent-blue);
+      padding: 2px 8px; border-radius: 6px;
+    }
+
+    .nav-tabs { display: flex; gap: 4px; background: #080c16; padding: 3px; border-radius: 8px; border: 1px solid var(--border); }
+    .tab-btn {
+      padding: 6px 14px; border-radius: 6px; font-size: 0.82rem; font-weight: 800;
+      color: var(--text-muted); cursor: pointer; background: transparent; border: none;
+      transition: var(--transition); display: inline-flex; align-items: center; gap: 5px;
+    }
+    .tab-btn.active { background: var(--bg-input); color: #ffffff; border: 1px solid var(--accent-blue); }
+
+    .header-right-tools { display: flex; align-items: center; gap: 8px; }
+    .data-source-indicator {
+      font-size: 0.74rem; font-weight: 700; color: var(--accent-green);
+      background: rgba(52, 211, 153, 0.12); padding: 4px 10px; border-radius: 6px;
+      border: 1px solid rgba(52, 211, 153, 0.3); display: flex; align-items: center; gap: 6px;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      padding: 6px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 800;
+      cursor: pointer; border: none; transition: var(--transition);
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-blue { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; }
+    .btn-green { background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
+    .btn-outline:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+    .btn-move { background: rgba(56, 189, 248, 0.15); border: 1px solid var(--border); color: var(--accent-blue); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-move:disabled { opacity: 0.25; cursor: default; }
+
+    /* メインコンテナ */
+    main { flex: 1; max-width: 1400px; width: 100%; margin: 0 auto; padding: 16px 20px 40px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* 共通カード */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 0.95rem; font-weight: 800; color: #ffffff;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; border-bottom: 1px solid rgba(40, 54, 84, 0.5); padding-bottom: 8px;
+    }
+
+    /* グリッドレイアウト */
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .grid-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+
+    @media (max-width: 1024px) {
+      .grid-4 { grid-template-columns: repeat(2, 1fr); }
+      .grid-6 { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .grid-2, .grid-3, .grid-4, .grid-6 { grid-template-columns: 1fr; }
+    }
+
+    /* 統計ハイライトボックス */
+    .stat-box {
+      background: var(--bg-card-sub); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 3px;
+    }
+    .stat-label { font-size: 0.74rem; font-weight: 700; color: var(--text-muted); }
+    .stat-val { font-size: 1.4rem; font-weight: 900; color: #ffffff; display: flex; align-items: baseline; gap: 4px; }
+    .stat-unit { font-size: 0.72rem; color: var(--text-muted); font-weight: normal; }
+    .stat-sub { font-size: 0.7rem; color: var(--text-muted); }
+
+    /* チャート枠 */
+    .chart-container-large { position: relative; height: 300px; width: 100%; margin-top: 6px; }
+    .chart-container-medium { position: relative; height: 230px; width: 100%; margin-top: 6px; }
+
+    /* フィルター・コントローラー */
+    .filter-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 10px; margin-bottom: 14px; background: var(--bg-card-sub);
+      padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);
+    }
+    .filter-group { display: flex; align-items: center; gap: 8px; }
+    .filter-label { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); }
+    .form-select, .form-input {
+      background: var(--bg-input); border: 1px solid var(--border);
+      color: var(--text-main); font-size: 0.82rem; font-weight: 700;
+      padding: 5px 10px; border-radius: 6px; outline: none;
+    }
+    .form-select:focus, .form-input:focus { border-color: var(--accent-blue); }
+
+    /* テーブルスタイル */
+    .table-scroll { max-height: 480px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+    .custom-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; text-align: left; }
+    .custom-table th {
+      background: #080d1a; color: var(--text-muted); font-weight: 800;
+      padding: 8px 10px; border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 var(--border);
+      white-space: nowrap;
+    }
+    .custom-table td {
+      padding: 7px 10px; border-bottom: 1px solid rgba(40, 54, 84, 0.5);
+      vertical-align: middle;
+    }
+    .custom-table tr:hover { background: rgba(56, 189, 248, 0.05); }
+    .custom-table td.center { text-align: center; }
+
+    .cat-badge { font-size: 0.68rem; padding: 2px 6px; border-radius: 4px; font-weight: 800; white-space: nowrap; display: inline-block; }
+    .cat-主食 { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+    .cat-汁物 { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+    .cat-おかず { background: rgba(251, 113, 133, 0.2); color: #fb7185; }
+    .cat-飲料 { background: rgba(34, 211, 238, 0.2); color: #22d3ee; }
+    .cat-間食 { background: rgba(251, 191, 36, 0.25); color: #fde047; }
+    .cat-夜食 { background: rgba(192, 132, 252, 0.25); color: #c084fc; }
+
+    .portion-tag {
+      background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border);
+      padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; color: var(--accent-amber);
+    }
+
+    /* 手順ガイドボックス */
+    .sync-guide-box {
+      background: rgba(15, 23, 42, 0.9); border: 1px solid var(--accent-blue);
+      border-radius: var(--radius); padding: 12px 16px; margin-bottom: 14px;
+      font-size: 0.76rem; line-height: 1.55;
+    }
+    .sync-guide-title {
+      font-size: 0.85rem; font-weight: 800; color: var(--accent-blue);
+      display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
+    }
+    .sync-steps-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 8px;
+    }
+    @media (max-width: 800px) { .sync-steps-grid { grid-template-columns: 1fr; } }
+    .sync-step-item {
+      background: rgba(8, 12, 22, 0.6); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 10px;
+    }
+    .sync-step-num { font-weight: 900; color: var(--accent-amber); margin-bottom: 2px; }
+
+    /* AI 相談・カンファレンスカード */
+    .ai-consultation-card {
+      background: linear-gradient(135deg, #111a2f, #15223c);
+      border: 1px solid var(--accent-blue); border-radius: var(--radius);
+      padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .consultation-input-row {
+      display: flex; gap: 8px; margin-bottom: 10px; align-items: stretch;
+    }
+    .consultation-textarea {
+      flex: 1; background: var(--bg-input); border: 1px solid var(--border);
+      color: #ffffff; border-radius: 6px; padding: 10px 14px; font-size: 0.88rem;
+      outline: none; resize: vertical; min-height: 70px;
+    }
+    .consultation-textarea:focus { border-color: var(--accent-blue); }
+    .consultation-output-box {
+      background: rgba(8, 12, 22, 0.85); border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px; min-height: 120px; font-size: 0.84rem; line-height: 1.65;
+    }
+    .conf-doc { border-left: 3px solid var(--accent-blue); padding-left: 10px; margin-bottom: 12px; }
+    .conf-nut { border-left: 3px solid var(--accent-green); padding-left: 10px; }
+
+    /* TAB 4: 医師提出用 A4クリニック・レポート */
+    .report-preview-wrap {
+      background: #ffffff; color: #1e293b; border-radius: 8px;
+      padding: 24px 30px; max-width: 980px; margin: 0 auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5); font-size: 11pt; line-height: 1.4;
+    }
+    .rep-header {
+      display: flex; justify-content: space-between; align-items: flex-end;
+      border-bottom: 2px solid #0f172a; padding-bottom: 8px; margin-bottom: 14px;
+    }
+    .rep-title { font-size: 16pt; font-weight: 900; color: #0f172a; }
+    .rep-meta { font-size: 9pt; color: #475569; text-align: right; }
+    
+    .rep-profile-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+      background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px;
+      padding: 10px 14px; margin-bottom: 10px; font-size: 9.5pt;
+    }
+    .rep-prof-item b { color: #0f172a; }
+
+    .rep-clinical-history-bar {
+      background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px;
+      padding: 8px 12px; margin-bottom: 14px; font-size: 8.5pt; line-height: 1.45;
+    }
+    .rep-clinical-history-bar b { color: #0f172a; }
+
+    .rep-summary-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 9.5pt; }
+    .rep-summary-table th, .rep-summary-table td {
+      border: 1px solid #cbd5e1; padding: 6px 10px; text-align: center;
+    }
+    .rep-summary-table th { background: #f1f5f9; color: #334155; font-weight: bold; }
+
+    .rep-eval-box {
+      background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #2563eb;
+      padding: 8px 12px; margin-bottom: 14px; border-radius: 4px; font-size: 9.5pt; color: #1e3a8a;
+    }
+
+    .rep-chart-wrap { height: 180px; width: 100%; margin-bottom: 14px; }
+
+    .rep-daily-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; text-align: center; }
+    .rep-daily-table th, .rep-daily-table td {
+      border: 1px solid #cbd5e1; padding: 4px 6px;
+    }
+    .rep-daily-table th { background: #f1f5f9; color: #334155; }
+    .rep-daily-table tr:nth-child(even) { background: #f8fafc; }
+
+    /* 印刷スタイル最適化 */
+    @media print {
+      body { background: #ffffff !important; color: #000000 !important; }
+      header, .no-print { display: none !important; }
+      main { padding: 0 !important; max-width: 100% !important; margin: 0 !important; }
+      .tab-content { display: none !important; }
+      #reportTab { display: block !important; }
+      .report-preview-wrap { box-shadow: none !important; padding: 0 !important; width: 100% !important; max-width: 100% !important; }
+      .rep-header { border-bottom-color: #000000 !important; }
+      .rep-summary-table th, .rep-daily-table th { background: #e2e8f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .rep-eval-box { background: #f1f5f9 !important; border-left-color: #000000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 上部固定ヘッダー -->
+<header>
+  <div class="header-inner">
+    <div class="brand-box">
+      <h1 class="brand-title">🩺 健康管理くん <span>PC Viewer</span></h1>
+      <span class="viewer-badge">Professional Clinical Suite</span>
+    </div>
+
+    <nav class="nav-tabs no-print">
+      <button class="tab-btn active" data-tab="masterTab" onclick="switchViewerTab('masterTab')">⚙️ 臨床マスタ管理室</button>
+      <button class="tab-btn" data-tab="consultTab" onclick="switchViewerTab('consultTab')">💬 AI総合相談室</button>
+      <button class="tab-btn" data-tab="analysisTab" onclick="switchViewerTab('analysisTab')">📊 多角ダッシュボード</button>
+      <button class="tab-btn" data-tab="reportTab" onclick="switchViewerTab('reportTab')">🖨️ 医師提出用A4レポート</button>
+    </nav>
+
+    <div class="header-right-tools no-print">
+      <div class="data-source-indicator" id="syncStatusBadge">
+        <span style="font-size:0.9rem;">●</span> <span id="syncStatusText">ローカル同期中</span>
+      </div>
+      <button class="btn btn-outline" onclick="document.getElementById('viewerJsonInput').click()">📂 JSON読込</button>
+      <input type="file" id="viewerJsonInput" accept=".json" style="display:none;" onchange="importViewerJSON(event)">
+      <button class="btn btn-green" onclick="exportViewerJSON()">💾 JSON保存</button>
+      <button class="btn btn-blue" onclick="window.print()">🖨️ レポート印刷/PDF</button>
+    </div>
+  </div>
+</header>
+
+<!-- メインコンテンツ -->
+<main>
+
+  <!-- =========================================================
+       TAB 1: ⚙️ 臨床マスタ管理室（お薬マスタ・既往歴・人間ドック・食品辞書・APIキー）
+       ========================================================= -->
+  <section id="masterTab" class="tab-content active">
+    
+    <!-- 🚨 スマホ ↔ PC 端末間データ移行・マスタ保守の鉄則ガイド -->
+    <div class="sync-guide-box no-print">
+      <div class="sync-guide-title">
+        <span>🚨【最重要】スマホ ↔ PC 端末間データ移行・お薬設定の連携手順</span>
+      </div>
+      <div>
+        普段の健康記録は<b>スマホ（index.html）</b>で行います。お薬の正式名称の入力や休薬の整理、既往歴・ドック数値の登録を行う際は、記録を失わないよう以下の<b>3ステップ</b>で行ってください。
+      </div>
+      <div class="sync-steps-grid">
+        <div class="sync-step-item">
+          <div class="sync-step-num">①［PCで編集する前］</div>
+          スマホの設定画面で<b>「💾 丸ごと保存(JSON)」</b>を押し、そのファイルをPCに送って上の<b>「📂 JSON読込」</b>で取り込みます。<br>
+          <span style="color:var(--accent-amber); font-weight:bold;">★必ず最新のスマホ記録を取り込んでから編集してください！</span>
+        </div>
+        <div class="sync-step-item">
+          <div class="sync-step-num">②［PCでの編集作業］</div>
+          下の表で、お薬の正式名登録・休薬・並び替え、既往歴・ドック結果の入力を行います。<br>
+          <span style="color:var(--accent-green); font-weight:bold;">★文字の打ち替えやチェック変更はすべてリアルタイムで自動保存されます！</span>
+        </div>
+        <div class="sync-step-item">
+          <div class="sync-step-num">③［スマホに戻す］</div>
+          右上の<b>「💾 JSON保存」</b>を押して新ファイルを保存し、スマホに送ってスマホ設定画面で<b>「📂 丸ごと復元(JSON)」</b>します。<br>
+          <span style="color:var(--accent-green); font-weight:bold;">★これで日々の記録を1件も失わずにスマホへ最新のお薬・臨床設定が反映されます！</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gemini APIキー 安全保管カード -->
+    <div class="card no-print" style="border-left: 3px solid var(--accent-blue);">
+      <div class="card-title">
+        <span>🔑 Gemini APIキー 安全保管コンソール</span>
+        <span style="font-size:0.72rem; color:var(--accent-green); font-weight:normal;" id="apiKeyStatusLabel">● 未設定 (ルールベース稼働中)</span>
+      </div>
+      <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">
+        ※ここに登録されたAPIキーはブラウザのlocalStorageに安全に保管され、相談室画面での誤操作による消去を完全に防止します。<br>
+        ※氏名や住所などの個人情報は一切APIへ送信されません。未設定時でも高精度な専門ルールベース判定が自動作動します。
+      </div>
+      <div style="display:flex; gap:8px; align-items:center; max-width:600px;">
+        <input type="password" id="geminiApiKeyInput" class="form-input" style="flex:1;" placeholder="AIzaSy... (APIキーを貼り付け)" onchange="saveGeminiApiKey()">
+        <button class="btn btn-blue" onclick="saveGeminiApiKey()">💾 キーを保存</button>
+      </div>
+    </div>
+
+    <!-- 🏥 既往歴・手術歴・アレルギー コンソール -->
+    <div class="card no-print" style="border-left: 3px solid var(--accent-purple);">
+      <div class="card-title">
+        <span>🏥 既往歴・心血管イベント・治療歴・アレルギー コンソール</span>
+        <span style="font-size:0.72rem; color:var(--accent-green); font-weight:bold;" id="historyAutoSaveNotice">✅ 自動保存中</span>
+      </div>
+      <div style="font-size:0.74rem; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">
+        ※過去の病歴（例: 狭心症、急性心筋梗塞、冠動脈ステント留置、不整脈、胃潰瘍等）やアレルギー、手術歴を自由に入力してください。<br>
+        ※入力された臨床背景は、AI健康相談・AIカンファレンス・医師提出レポートに自動連携され、大学病院専門外来と同水準の精緻な助言の根拠となります。
+      </div>
+      <div class="grid-2">
+        <div>
+          <label class="filter-label" style="display:block; margin-bottom:4px;">主要な既往症・心血管イベント（カンマ区切りまたは自由記述）:</label>
+          <input type="text" id="hist_conditions" class="form-input" style="width:100%;" placeholder="例: 冠動脈ステント留置(2023年), 高血圧症, 脂質異常症, 胃潰瘍" oninput="autoSaveClinicalHistory()">
+        </div>
+        <div>
+          <label class="filter-label" style="display:block; margin-bottom:4px;">特記事項・手術歴・薬剤アレルギー・家族歴:</label>
+          <input type="text" id="hist_notes" class="form-input" style="width:100%;" placeholder="例: 造影剤アレルギーなし、父が高血圧既往、禁煙継続中" oninput="autoSaveClinicalHistory()">
+        </div>
+      </div>
+    </div>
+
+    <!-- 🧪 人間ドック・血液生化学 検査値ストックカルテ -->
+    <div class="card no-print" style="border-left: 3px solid var(--accent-amber);">
+      <div class="card-title">
+        <span>🧪 直近 人間ドック・定期血液検査値 ストックカルテ</span>
+        <span style="font-size:0.72rem; color:var(--accent-green); font-weight:bold;" id="labAutoSaveNotice">✅ 自動保存中</span>
+      </div>
+      <div style="font-size:0.74rem; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">
+        ※直近の健診結果数値を入力しておくと、AIが血圧や食塩摂取量、PFC栄養バランスと掛け合わせて多角的にリスク評価を行います。<br>
+        ※空欄の項目があっても問題ありません。数字を入力した瞬間にリアルタイムで自動保存されます。
+      </div>
+      
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+        <span class="filter-label">受診日 (健診年月日):</span>
+        <input type="date" id="lab_checkDate" class="form-input" style="width:150px;" onchange="autoSaveClinicalHistory()">
+      </div>
+
+      <div class="grid-6" style="margin-bottom:10px;">
+        <div class="stat-box" style="padding:8px 10px;">
+          <span class="stat-label">LDLコレステロール</span>
+          <input type="number" step="1" id="lab_ldl" class="form-input" style="margin-top:4px;" placeholder="例: 85" oninput="autoSaveClinicalHistory()">
+          <span class="stat-sub" style="margin-top:2px;">基準: &lt;120 (冠動脈後&lt;70)</span>
+        </div>
+        <div class="stat-box" style="padding:8px 10px;">
+          <span class="stat-label">HDLコレステロール</span>
+          <input type="number" step="1" id="lab_hdl" class="form-input" style="margin-top:4px;" placeholder="例: 55" oninput="autoSaveClinicalHistory()">
+          <span class="stat-sub" style="margin-top:2px;">基準: &gt;40 mg/dL</span>
+        </div>
+        <div class="stat-box" style="padding:8px 10px;">
+          <span class="stat-label">中性脂肪 (TG)</span>
+          <input type="number" step="1" id="lab_tg" class="form-input" style="margin-top:4px;" placeholder="例: 130" oninput="autoSaveClinicalHistory()">
+          <span class="stat-sub" style="margin-top:2px;">基準: &lt;150 mg/dL</span>
+        </div>
+        <div class="stat-box" style="padding:8px 10px;">
+          <span class="stat-label">空腹時血糖 (FPG)</span>
+          <input type="number" step="1" id="lab_fpg" class="form-input" style="margin-top:4px;" placeholder="例: 98" oninput="autoSaveClinicalHistory()">
+          <span class="stat-sub" style="margin-top:2px;">基準: &lt;100 mg/dL</span>
+        </div>
+        <div class="stat-box" style="padding:8px 10px;">
+          <span class="stat-label">HbA1c (NGSP)</span>
+          <input type="number" step="0.1" id="lab_hba1c" class="form-input" style="margin-top:4px;" placeholder="例: 5.6" oninput="autoSaveClinicalHistory()">
+          <span class="stat-sub" style="margin-top:2px;">基準: &lt;6.0 %</span>
+        </div>
+        <div class="stat-box" style="padding:8px 10px;">
+          <span class="stat-label">推算GFR (eGFR)</span>
+          <input type="number" step="0.1" id="lab_egfr" class="form-input" style="margin-top:4px;" placeholder="例: 68.5" oninput="autoSaveClinicalHistory()">
+          <span class="stat-sub" style="margin-top:2px;">基準: &gt;60 mL/min</span>
+        </div>
+      </div>
+
+      <div class="grid-6" style="margin-bottom:10px;">
+        <div class="stat-box" style="padding:8px 10px;">
+          <span class="stat-label">血清クレアチニン</span>
+          <input type="number" step="0.01" id="lab_cre" class="form-input" style="margin-top:4px;" placeholder="例: 0.92" oninput="autoSaveClinicalHistory()">
+          <span class="stat-sub" style="margin-top:2px;">男性基準: &lt;1.00</span>
+        </div>
+        <div class="stat-box" style="padding:8px 10px;">
+          <span class="stat-label">尿酸値 (UA)</span>
+          <input type="number" step="0.1" id="lab_ua" class="form-input" style="margin-top:4px;" placeholder="例: 6.2" oninput="autoSaveClinicalHistory()">
+          <span class="stat-sub" style="margin-top:2px;">基準: &lt;7.0 mg/dL</span>
+        </div>
+        <div class="stat-box" style="padding:8px 10px;">
+          <span class="stat-label">AST (GOT)</span>
+          <input type="number" step="1" id="lab_ast" class="form-input" style="margin-top:4px;" placeholder="例: 22" oninput="autoSaveClinicalHistory()">
+          <span class="stat-sub" style="margin-top:2px;">基準: &lt;30 U/L</span>
+        </div>
+        <div class="stat-box" style="padding:8px 10px;">
+          <span class="stat-label">ALT (GPT)</span>
+          <input type="number" step="1" id="lab_alt" class="form-input" style="margin-top:4px;" placeholder="例: 26" oninput="autoSaveClinicalHistory()">
+          <span class="stat-sub" style="margin-top:2px;">基準: &lt;30 U/L</span>
+        </div>
+        <div class="stat-box" style="padding:8px 10px;">
+          <span class="stat-label">γ-GTP (肝機能)</span>
+          <input type="number" step="1" id="lab_ggtp" class="form-input" style="margin-top:4px;" placeholder="例: 45" oninput="autoSaveClinicalHistory()">
+          <span class="stat-sub" style="margin-top:2px;">基準: &lt;50 U/L</span>
+        </div>
+        <div class="stat-box" style="padding:8px 10px;">
+          <span class="stat-label">尿蛋白 / 尿潜血</span>
+          <input type="text" id="lab_urine" class="form-input" style="margin-top:4px;" placeholder="例: (-), (-)" oninput="autoSaveClinicalHistory()">
+          <span class="stat-sub" style="margin-top:2px;">正常: 陰性(-)</span>
+        </div>
+      </div>
+
+      <div>
+        <label class="filter-label" style="display:block; margin-bottom:4px;">健診総合所見・医師コメント・判定メモ:</label>
+        <input type="text" id="lab_doctorComment" class="form-input" style="width:100%;" placeholder="例: 脂質・血圧ともに内服治療にて良好にコントロール。頸動脈エコー軽度プラークあり現状維持。" oninput="autoSaveClinicalHistory()">
+      </div>
+    </div>
+
+    <!-- お薬マスタ管理（自動保存・2段分離・▲▼並び替え・正式名・過去履歴安全再同期） -->
+    <div class="card no-print">
+      <div class="card-title">
+        <span>💊 お薬・サプリメント 臨床マスタ管理（正式規格・服用中/休薬中 アーカイブ）</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <span style="font-size:0.72rem; color:var(--accent-green); font-weight:bold;" id="medAutoSaveNotice">✅ 自動保存中</span>
+          <button class="btn btn-outline" style="font-size:0.72rem; padding:4px 8px;" onclick="addMedRowMaster()">＋ 新規お薬追加</button>
+          <button class="btn btn-outline" style="font-size:0.72rem; padding:4px 8px; color:var(--accent-amber); border-color:var(--accent-amber);" onclick="syncMedNamesWithHistory()" title="過去の全記録データを安全に走査し、最新の表示名に紐付けます">🔄 過去履歴と名称を安全同期</button>
+        </div>
+      </div>
+      <div style="font-size:0.74rem; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">
+        ※日々のスマホ入力画面には短い<b>「表示名」</b>が並び、Gemini AIや医師提出レポートには<b>「正式な薬剤名・規格」</b>が連携されます。<br>
+        ※休薬になった薬は「休薬」ボタンを押すと下のアーカイブに格納されます。<b>入力内容は変更した瞬間に自動保存されます。</b>
+      </div>
+
+      <!-- 上段：現在服用中のお薬 -->
+      <div style="margin-bottom:14px;">
+        <div style="font-size:0.8rem; font-weight:800; color:var(--accent-green); margin-bottom:6px; display:flex; justify-content:space-between;">
+          <span>🟢 現在服用中のお薬・サプリ (<span id="activeMedsCount">0</span>件)</span>
+          <span style="font-size:0.7rem; color:var(--text-muted); font-weight:normal;">スマホの入力画面にチップとして表示されます</span>
+        </div>
+        <div class="table-scroll" style="max-height:280px;">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th style="width: 55px;">順序</th>
+                <th style="width: 140px;">表示名 (チップ用)</th>
+                <th style="width: 240px;">正式な薬剤名・規格 (カルテ・AI用)</th>
+                <th style="width: 32px;" class="center">朝</th>
+                <th style="width: 32px;" class="center">昼</th>
+                <th style="width: 32px;" class="center">晩</th>
+                <th style="width: 32px;" class="center">就</th>
+                <th style="width: 65px;" class="center">休薬</th>
+              </tr>
+            </thead>
+            <tbody id="medActiveTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 下段：休薬中のお薬アーカイブ -->
+      <div>
+        <div style="font-size:0.8rem; font-weight:800; color:var(--accent-amber); margin-bottom:6px; display:flex; justify-content:space-between;">
+          <span>⏸️ 休薬中のお薬アーカイブ (<span id="inactiveMedsCount">0</span>件)</span>
+          <span style="font-size:0.7rem; color:var(--text-muted); font-weight:normal;">過去の日付を開いた時のみ自動復元されます（普段は非表示）</span>
+        </div>
+        <div class="table-scroll" style="max-height:200px;">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th style="width: 140px;">表示名</th>
+                <th style="width: 280px;">正式な薬剤名・規格</th>
+                <th style="width: 65px;" class="center">再開</th>
+                <th style="width: 50px;" class="center">削除</th>
+              </tr>
+            </thead>
+            <tbody id="medInactiveTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 食品辞書フィルターバー ＆ 全品マスタ -->
+    <div class="card">
+      <div class="card-title">
+        <span>🍱 食品パーツ・想定ポーション＆PFC代謝基準値 一覧（全品マスター）</span>
+        <span style="font-size:0.75rem; color:var(--accent-blue); font-weight:normal;" id="dictItemCount">-- 品</span>
+      </div>
+
+      <div class="filter-bar no-print" style="margin-bottom:10px;">
+        <div class="filter-group">
+          <span class="filter-label">区分絞り込み:</span>
+          <select id="dictCatFilter" class="form-select" onchange="renderDictTable()">
+            <option value="ALL">全区分 (全品表示)</option>
+            <option value="主食">🍚 主食</option>
+            <option value="汁物">🍲 汁物</option>
+            <option value="おかず">🥩 おかず</option>
+            <option value="飲料">☕ 飲料</option>
+            <option value="間食">🍪 間食</option>
+            <option value="夜食">🍜 夜食</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <span class="filter-label">キーワード検索:</span>
+          <input type="text" id="dictSearchInput" class="form-input" placeholder="例: チーズ、明太子、味噌汁、焼き鳥" oninput="renderDictTable()">
+        </div>
+
+        <div style="font-size:0.74rem; color:var(--text-muted);">
+          ※文部科学省「日本食品標準成分表（八訂）」準拠。味噌汁2択・チーズ・明太子対応
+        </div>
+      </div>
+
+      <div class="table-scroll" style="max-height: 480px;">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th style="width: 60px;">区分</th>
+              <th style="width: 140px;">メニュー名</th>
+              <th style="width: 180px;">基準ポーション（「普通」の想定）</th>
+              <th style="width: 180px;">少 / 普 / 多 のレベル感目安</th>
+              <th style="width: 70px; text-align:right;">kcal</th>
+              <th style="width: 65px; text-align:right;">塩分</th>
+              <th style="width: 70px; text-align:right; color:#60a5fa;">P (蛋白)</th>
+              <th style="width: 70px; text-align:right; color:#fb7185;">F (脂質)</th>
+              <th style="width: 70px; text-align:right; color:#fbbf24;">C (糖質)</th>
+              <th style="width: 160px;">サブメニュー / 臨床減塩メモ</th>
+            </tr>
+          </thead>
+          <tbody id="dictTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- =========================================================
+       TAB 2: 💬 AI健康相談・メニュー判定室（独立・広々相談画面）
+       ========================================================= -->
+  <section id="consultTab" class="tab-content">
+    
+    <div class="ai-consultation-card no-print">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <h2 style="font-size:1.05rem; font-weight:800; color:#ffffff;">💬 専任医療チーム AI健康相談 ＆ メニュー選び逆引き相談室</h2>
+        <span style="font-size:0.74rem; color:var(--accent-blue); font-weight:bold;">※質問内容に応じて医師/栄養士がスマートトリアージ回答</span>
+      </div>
+
+      <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:12px; line-height:1.5;">
+        日常の体調不安、頭痛や血圧変動、処方薬（ジルムロ、キャブピリン、アトルバスタチン、カルベジロール等）の飲み合わせ、過去の既往歴・血液検査値との関連、外食で食べたメニューの登録方法など、何でもご自由にご入力ください。
+      </div>
+
+      <div class="consultation-input-row">
+        <textarea id="aiConsultationInput" class="consultation-textarea" placeholder="例: 「お昼に定食屋で生姜焼きと奥さんの作った味噌汁、明太子ご飯を食べたけど、どれを登録すればいい？」「降圧剤とお酒の飲み合わせについて教えて」「直近のLDLが85でステント治療歴があるが、朝の血圧はどのくらいを目指すべき？」"></textarea>
+        <button class="btn btn-blue" id="btnConsultAi" style="padding:0 24px; font-size:0.9rem;" onclick="runAiConsultation()">✨ AIに質問・相談する</button>
+      </div>
+
+      <div class="consultation-output-box" id="consultationOutputArea">
+        上の枠に相談内容を入力して「AIに質問・相談する」を押すと、循環器内科専門医Dr.ケンまたは管理栄養士アヤがあなたの直近バイタル・既往歴・人間ドック数値・お薬・体調特記メモを踏まえて最適なアドバイスを回答します。
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- =========================================================
+       TAB 3: 多角臨床ダッシュボード（大画面・PFC・AIカンファレンス）
+       ========================================================= -->
+  <section id="analysisTab" class="tab-content">
+    
+    <div class="filter-bar no-print">
+      <div class="filter-group">
+        <span class="filter-label">分析期間:</span>
+        <select id="analysisPeriodSelect" class="form-select" onchange="refreshAnalysis()">
+          <option value="14d" selected>直近 2週間 (14日間)</option>
+          <option value="30d">直近 1ヶ月 (30日間)</option>
+          <option value="90d">直近 3ヶ月 (四半期)</option>
+          <option value="ALL">全記録データ</option>
+        </select>
+      </div>
+
+      <div style="font-size:0.75rem; color:var(--accent-green); font-weight:bold;" id="analysisDataRangeText">
+        対象データ：読み込み中...
+      </div>
+    </div>
+
+    <!-- AIカンファレンス・カード -->
+    <div class="ai-consultation-card no-print">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:0.95rem; font-weight:800; color:#ffffff;">🤖 AI医療チーム総合カンファレンス (Dr.ケン ＆ 管理栄養士 アヤ)</span>
+        <button class="btn btn-green" id="btnRunAi" onclick="runAiConference()">✨ カンファレンスを実行・最新分析</button>
+      </div>
+
+      <div class="consultation-output-box" id="conferenceOutputArea">
+        「カンファレンスを実行」ボタンを押すと、期間中の朝晩血圧乖離・脈圧・PFCバランス・睡眠・お薬規格・既往歴・血液検査値・体調特記メモを網羅した詳細な臨床カルテと栄養指導を生成します。
+      </div>
+    </div>
+
+    <!-- 臨床バイタル サマリーカード -->
+    <div class="grid-4" style="margin-bottom:14px;">
+      <div class="stat-box">
+        <span class="stat-label">朝血圧 (平均 / 7日SMA)</span>
+        <div class="stat-val" id="stat_m_bp">-- / -- <span class="stat-unit">mmHg</span></div>
+        <div class="stat-sub" id="stat_m_bp_sub">家庭至適: 125/75未満</div>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">就寝前血圧 (平均)</span>
+        <div class="stat-val" id="stat_n_bp">-- / -- <span class="stat-unit">mmHg</span></div>
+        <div class="stat-sub" id="stat_n_bp_sub">夜間高血圧チェック</div>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">平均脈圧 (収縮期 - 拡張期)</span>
+        <div class="stat-val" id="stat_pp">-- <span class="stat-unit">mmHg</span></div>
+        <div class="stat-sub" id="stat_pp_sub">血管しなやかさ指標 (基準&lt;65)</div>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">推定平均食塩摂取量</span>
+        <div class="stat-val" id="stat_salt">-- <span class="stat-unit">g/日</span></div>
+        <div class="stat-sub" id="stat_salt_sub">学会推奨: 6.0g未満</div>
+      </div>
+    </div>
+
+    <!-- グラフエリア 1: 血圧 朝晩比較・モーニングサージ解析 ＆ PFCバランス -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">
+          <span>❤️ 朝晩血圧推移 ＆ モーニングサージ解析 (ME差)</span>
+          <span style="font-size:0.72rem; color:var(--text-muted);">── 赤:朝 / ── 紫:夜 / ── 緑:家庭基準(125)</span>
+        </div>
+        <div class="chart-container-large"><canvas id="viewerBpChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>🥗 推定PFCエネルギー比率（タンパク質・脂質・炭水化物）</span>
+          <span style="font-size:0.72rem; color:var(--text-muted);">理想: P 13-20% / F 20-30% / C 50-65%</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="width:180px; height:180px; position:relative; flex-shrink:0;">
+            <canvas id="viewerPfcPieChart"></canvas>
+          </div>
+          <div style="flex:1;" id="pfcMetricsSummaryBox">
+            <div style="font-size:0.78rem; line-height:1.6;" id="pfcTextDetail">
+              PFCデータを集計中...
+            </div>
+          </div>
+        </div>
+        <div class="chart-container-medium" style="height:120px; margin-top:10px;">
+          <canvas id="viewerPfcStackChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- グラフエリア 2: 体重＆歩数 ＆ 睡眠vs翌朝血圧 -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">
+          <span>⚖️ 体重トレンド (朝優先測定) ＆ 🚶 歩数相関</span>
+        </div>
+        <div class="chart-container-large"><canvas id="viewerWeightStepsChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>😴 睡眠時間 vs 翌朝最高血圧 相関トレンド</span>
+          <span style="font-size:0.72rem; color:var(--text-muted);">睡眠不足によるモーニングサージを検出</span>
+        </div>
+        <div class="chart-container-large"><canvas id="viewerSleepBpChart"></canvas></div>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- =========================================================
+       TAB 4: 医師提出用 A4クリニック・レポート
+       ========================================================= -->
+  <section id="reportTab" class="tab-content">
+    
+    <div class="filter-bar no-print" style="max-width:980px; margin:0 auto 16px;">
+      <div class="filter-group">
+        <span class="filter-label">レポート期間:</span>
+        <select id="reportPeriodSelect" class="form-select" onchange="generateDoctorReport()">
+          <option value="14d" selected>直近 2週間 (診察最適)</option>
+          <option value="30d">直近 1ヶ月</option>
+          <option value="60d">直近 2ヶ月</option>
+        </select>
+      </div>
+      <button class="btn btn-blue" onclick="window.print()">🖨️ A4印刷 / PDF保存</button>
+    </div>
+
+    <div class="report-preview-wrap" id="printableReportArea">
+      
+      <div class="rep-header">
+        <div>
+          <h2 class="rep-title">家庭血圧・生活習慣 臨床レポート</h2>
+          <div style="font-size:9pt; color:#475569; margin-top:2px;">日本高血圧学会 JSH2019 家庭血圧測定指針準拠</div>
+        </div>
+        <div class="rep-meta">
+          <div><b>提出日:</b> <span id="repIssueDate">2026年-月-日</span></div>
+          <div><b>対象期間:</b> <span id="repPeriodRange">2026/00/00 〜 2026/00/00</span></div>
+        </div>
+      </div>
+
+      <div class="rep-profile-grid">
+        <div class="rep-prof-item">年代/性別: <b id="repAgeGender">50代 男性</b></div>
+        <div class="rep-prof-item">身長/直近体重: <b id="repHeightWeight">172.0 cm / 68.0 kg</b></div>
+        <div class="rep-prof-item">BMI / 適正体重: <b id="repBmiStd">23.0 (適正 65.1kg)</b></div>
+        <div class="rep-prof-item">重点管理: <b id="repCares">高血圧, 脂質異常症</b></div>
+      </div>
+
+      <div class="rep-clinical-history-bar" id="repClinicalHistoryBar">
+        <div><b>【臨床背景・既往歴】:</b> <span id="repHpmConditions">特記なし</span></div>
+        <div style="margin-top:2px;"><b>【直近ドック/血液検査】:</b> <span id="repHpmLab">未登録</span></div>
+      </div>
+
+      <table class="rep-summary-table">
+        <thead>
+          <tr>
+            <th>項目</th>
+            <th>平均値</th>
+            <th>至適・推奨基準</th>
+            <th>期間内 最大 / 最小</th>
+            <th>臨床判定</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>🌅 起床時血圧 (朝)</b></td>
+            <td><b id="rep_avg_m_bp">-- / --</b> mmHg</td>
+            <td>125 / 75 未満</td>
+            <td id="rep_minmax_m_bp">-- / --</td>
+            <td id="rep_judge_m_bp">判定中</td>
+          </tr>
+          <tr>
+            <td><b>🛌 就寝前血圧 (夜)</b></td>
+            <td><b id="rep_avg_n_bp">-- / --</b> mmHg</td>
+            <td>125 / 75 未満</td>
+            <td id="rep_minmax_n_bp">-- / --</td>
+            <td id="rep_judge_n_bp">判定中</td>
+          </tr>
+          <tr>
+            <td><b>❤️ 脈圧 (収縮期 - 拡張期)</b></td>
+            <td><b id="rep_avg_pp">--</b> mmHg</td>
+            <td>65 未満 (血管弾性)</td>
+            <td id="rep_minmax_pp">-- / --</td>
+            <td id="rep_judge_pp">判定中</td>
+          </tr>
+          <tr>
+            <td><b>💊 処方薬・服薬遵守率</b></td>
+            <td><b id="rep_med_adherence">--</b> %</td>
+            <td>95% 以上</td>
+            <td>--</td>
+            <td id="rep_judge_med">判定中</td>
+          </tr>
+          <tr>
+            <td><b>🧂 推定食塩摂取量</b></td>
+            <td><b id="rep_avg_salt">--</b> g/日</td>
+            <td>6.0 g 未満</td>
+            <td id="rep_minmax_salt">-- / --</td>
+            <td id="rep_judge_salt">判定中</td>
+          </tr>
+          <tr>
+            <td><b>🚶 平均歩数 / 睡眠</b></td>
+            <td><b id="rep_avg_steps">--</b> 歩 / <b id="rep_avg_sleep">--</b> h</td>
+            <td>8,000歩 / 7.0h</td>
+            <td id="rep_minmax_steps">--</td>
+            <td>良好</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="rep-eval-box" id="repClinicalEvaluationText">
+        <b>【循環器内科 臨床評価サマリー】:</b> 集計中です...
+      </div>
+
+      <div style="font-size:9pt; font-weight:bold; color:#0f172a; margin-bottom:4px;">■ 家庭血圧推移トレンド（朝・就寝前・至適基準線）</div>
+      <div class="rep-chart-wrap">
+        <canvas id="reportPrintChart"></canvas>
+      </div>
+
+      <div style="font-size:9pt; font-weight:bold; color:#0f172a; margin-top:10px; margin-bottom:4px;">■ 日別 測定・生活習慣記録一覧（カルテ転記用）</div>
+      <table class="rep-daily-table">
+        <thead>
+          <tr>
+            <th style="width:75px;">日付</th>
+            <th style="width:85px;">朝血圧 (脈拍)</th>
+            <th style="width:85px;">夜血圧 (脈拍)</th>
+            <th style="width:45px;">脈圧</th>
+            <th style="width:45px;">服薬</th>
+            <th style="width:50px;">体重</th>
+            <th style="width:55px;">歩数</th>
+            <th style="width:45px;">塩分</th>
+            <th style="width:45px;">睡眠</th>
+            <th>主な食事・特記事項（体調メモ・飲酒）</th>
+          </tr>
+        </thead>
+        <tbody id="repDailyTableBody"></tbody>
+      </table>
+
+    </div>
+
+  </section>
+
+</main>
+
+<!-- 共通辞書およびPCビューワー専用ロジック読み込み -->
+<script src="food_dict.js"></script>
+<script src="viewer_logic.js"></script>
+</body>
+</html>
