@@ -1,4 +1,4 @@
-<!-- [稼働Ver 作業版 Rev.22] スマホ専任化・お薬スリム設定・端末間データ移行黄金手順ガイド明記 -->
+<!-- [稼働Ver 作業版 Rev.23] スマホ専任化・共通食品辞書連携・間食マスタ設定対応 (index.html) -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -601,7 +601,7 @@
     <div class="top-row-1">
       <div class="brand-wrap">
         <div class="brand-title">🩺 <span>健康管理くん</span></div>
-        <span class="app-version-badge" id="appVersionBadge">v1.5.3</span>
+        <span class="app-version-badge" id="appVersionBadge">v1.6.0</span>
       </div>
       <nav class="nav-tabs">
         <button class="tab-btn active" data-tab="inputTab" onclick="switchTab('inputTab')">✍️ 入力</button>
@@ -1340,7 +1340,7 @@
 
         <div style="font-size:0.72rem; color:var(--text-muted); margin-top:4px; margin-bottom:6px; line-height:1.45;">
           ※現在服用中のお薬と、飲む時間帯（朝・昼・晩・就）を選択できます。<br>
-          ※正式な薬剤名（ジルムロ配合錠等）の登録や休薬管理・並び替えは、大画面の<b>PCビューワー (viewer.html)</b> で安全に行えます。
+          ※正式な薬剤名（ジルムロ配合錠等）の登録や休薬管理・並び替えは、大画面の<b>PCビューワー (viewer_main.html)</b> で安全に行えます。
         </div>
 
         <div class="menu-master-scroll" style="max-height:280px;">
@@ -1404,14 +1404,14 @@
         </table>
       </div>
 
-      <!-- 食事パーツ設定（全品マスタ・誤操作防止ロック済） -->
+      <!-- 食事パーツ設定（朝・昼・晩・間食・夜食 5列チェック設定対応） -->
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h2 class="card-title">🍱 食事パーツ設定（全品マスタ）</h2>
+          <h2 class="card-title">🍱 食事パーツ設定（全品マスタ・間食チェック対応）</h2>
           <button class="btn btn-outline" style="padding:2px 8px; font-size:0.7rem;" onclick="resetMenusToDefault()">↺ 初期値に戻す</button>
         </div>
         <div style="font-size:0.71rem; color:var(--text-muted); margin-top:3px; margin-bottom:5px;">
-          ※各時間帯の表示・非表示を設定できます。短縮名称・味噌汁・チーズ・明太子を完全網羅。基準値（kcal・塩分）は誤操作防止のため安全にロック（閲覧専用）されています。
+          ※朝・昼・晩・間食・夜食の表示・非表示を設定できます。基準値（kcal・塩分）は誤操作防止のため安全にロック（閲覧専用）されています。
         </div>
         <div class="menu-master-scroll">
           <table class="settings-table">
@@ -1422,9 +1422,10 @@
                 <th style="width: 26px;">朝</th>
                 <th style="width: 26px;">昼</th>
                 <th style="width: 26px;">晩</th>
+                <th style="width: 26px;">間</th>
                 <th style="width: 26px;">夜</th>
-                <th style="width: 48px;">kcal</th>
-                <th style="width: 42px;">塩分</th>
+                <th style="width: 46px;">kcal</th>
+                <th style="width: 40px;">塩分</th>
               </tr>
             </thead>
             <tbody id="menuMasterTableBody"></tbody>
@@ -1440,7 +1441,7 @@
         <div class="backup-scenario-card">
           <div class="scenario-title" style="color:var(--accent-blue);">📦 【推奨】アプリの丸ごと保存 / PCビューワーへの安全連携</div>
           <div class="scenario-desc">
-            お薬リスト、メニュー設定、目標プロファイル、毎日の健康記録・特記メモを<b>すべて1つのファイル</b>に保存します。PCビューワー（`viewer.html`）へ渡す際もこのファイルを使用します。
+            お薬リスト、メニュー設定、目標プロファイル、毎日の健康記録・特記メモを<b>すべて1つのファイル</b>に保存します。PCビューワー（`viewer_main.html`）へ渡す際もこのファイルを使用します。
           </div>
           <div style="display:flex; gap:6px;">
             <button class="btn btn-save" style="margin-top:0; width:auto; padding:5px 12px;" onclick="exportFullJSON()">💾 丸ごと保存 (JSON)</button>
@@ -1487,25 +1488,25 @@
         </h2>
         <div class="guide-lead">
           健康管理くんは、プライバシー完全保護のためサーバーを持たず、ブラウザ内（localStorage）だけに記録を安全保管しています。<br>
-          <b>日々の記録はスマホで行い、マスタ保守（お薬の正式名登録や休薬管理）をPCで行う際は、記録の上書き消失を防ぐため必ず以下の3ステップを行ってください。</b>
+          <b>日々の記録はスマホで行い、マスタ保守（お薬の正式名登録や休薬管理、既往歴・ドック数値の登録）をPCで行う際は、記録の上書き消失を防ぐため必ず以下の3ステップを行ってください。</b>
         </div>
         <div class="guide-step-card" style="border-left: 3px solid var(--accent-blue);">
           <div class="guide-step-title">①［PCでメンテする前］スマホ ➔ PCへのデータ受け渡し</div>
           <div class="guide-text">
-            スマホの設定タブで<b>「💾 丸ごと保存(JSON)」</b>を押し、最新の記録ファイルを保存します。そのファイルをメール等でPCに送り、PCビューワー（`viewer.html`）のヘッダーにある<b>「📂 JSON読込」</b>で取り込みます。<br>
+            スマホの設定タブで<b>「💾 丸ごと保存(JSON)」</b>を押し、最新の記録ファイルを保存します。そのファイルをメール等でPCに送り、PCビューワー（`viewer_main.html`）のヘッダーにある<b>「📂 JSON読込」</b>で取り込みます。<br>
             <b style="color:var(--accent-amber);">※鉄則：必ずスマホの最新記録を取り込んでからPCで編集を始めてください！</b>
           </div>
         </div>
         <div class="guide-step-card" style="border-left: 3px solid var(--accent-green);">
           <div class="guide-step-title">②［PCでの編集作業］PCビューワーでマスタ保守</div>
           <div class="guide-text">
-            PCビューワーの「⚙️ 臨床マスタ管理室」にて、お薬の正式名称（ジルムロ、キャブピリン等）の入力、休薬移動、表示順の並び替えを行い、<b>「💾 お薬マスタの変更を保存」</b>を押します。
+            PCビューワーの「⚙️ 臨床マスタ管理室」にて、お薬の正式名称（ジルムロ、キャブピリン等）の入力、休薬移動、既往歴や健診結果のストックを行い、<b>「💾 JSON保存」</b>で新ファイルを保存します。
           </div>
         </div>
         <div class="guide-step-card" style="border-left: 3px solid var(--accent-purple);">
           <div class="guide-step-title">③［スマホに戻す］PC ➔ スマホへの復元反映</div>
           <div class="guide-text">
-            PCビューワーのヘッダーにある<b>「💾 JSON保存」</b>を押し、新ファイルをスマホに送ります。スマホの設定タブで<b>「📂 丸ごと復元(JSON)」</b>を押してそのファイルを取り込みます。<br>
+            PCからスマホに送った新ファイルを、スマホの設定タブで<b>「📂 丸ごと復元(JSON)」</b>を押して取り込みます。<br>
             <b style="color:var(--accent-green);">※これで日々のバイタル記録を1日分も失うことなく、PCで整えたマスタがスマホに完全同期されます！</b>
           </div>
         </div>
@@ -1521,7 +1522,7 @@
 
       <section class="guide-section">
         <h2 class="guide-title">🧭 （３）毎日の操作手順（生活リズムに合わせた1分ルーティン）</h2>
-        <div class="guide-lead">1日に何度も長考する必要はありません。生活の節目（朝・間食・昼・晩・就寝前）に1分以内でタップするだけです。オートセーブされるため、タブを閉じても消えません。就寝前にメモ欄へ一言入れておくと、PCビューワーの診察レポートやAIカンファレンスにも反映されます。</div>
+        <div class="guide-lead">1日に何度も長考する必要はありません。生活の節目（朝・間食・昼・晩・夜食・就寝前）に1分以内でタップするだけです。オートセーブされるため、タブを閉じても消えません。就寝前にメモ欄へ一言入れておくと、PCビューワーの診察レポートやAIカンファレンスにも反映されます。</div>
       </section>
 
       <section class="guide-section">
@@ -1560,7 +1561,7 @@
             <div class="char-name">管理栄養士 アヤ（Aya）</div>
             <div class="char-role">臨床病態栄養指導士 / 食習慣コーチ</div>
             <div class="char-desc">
-              「ラーメンやお肉、お酒も人生の大切な楽しみです！チーズや明太子も仲間入りしました。PCビューワー側では全食品辞書を見ながら『今日食べたこの定食は何を登録すればいい？』とGemini AIにいつでも自由相談できますので、ぜひ活用してくださいね◎」
+              「ラーメンやお肉、お酒も人生の大切な楽しみです！チーズや明太子、果物も仲間入りしました。PCビューワー側では全食品辞書を見ながら『今日食べたこの定食は何を登録すればいい？』とGemini AIにいつでも自由相談できますので、ぜひ活用してくださいね◎」
             </div>
           </div>
         </div>
@@ -1745,7 +1746,8 @@
   </div>
 </div>
 
-<!-- 外部JSロジック読み込み -->
-<script src="app.js"></script>
+<!-- 共通食品辞書およびスマホ専用ロジック読み込み -->
+<script src="food_dict.js"></script>
+<script src="mobile_logic.js"></script>
 </body>
 </html>
