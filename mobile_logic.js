@@ -207,7 +207,7 @@ function getCurrentTimeString() {
 
 function getAppVersion() {
   const badge = document.getElementById('appVersionBadge');
-  return badge ? badge.textContent.trim() : 'v1.5.3';
+  return badge ? badge.textContent.trim() : 'v1.6.1';
 }
 
 function openDatePicker() {
@@ -878,7 +878,7 @@ function checkAllMed(slot) {
   autoSaveField(slot);
 }
 
-// 🍱 食品メニューマスタ読み込み（共通 food_dict.js 連携 ＆ 間食自動マイグレーション）
+// 🍱 食品メニューマスタ読み込み（共通 food_dict.js との完全自動同期＆後方互換マイグレーション）
 function loadMenus() {
   const rawM = localStorage.getItem(MASTER_KEY_MENUS);
   const defaultMenus = (typeof DEFAULT_50_MENUS !== 'undefined') ? DEFAULT_50_MENUS : [];
@@ -886,23 +886,36 @@ function loadMenus() {
   if (rawM) {
     try {
       const parsed = JSON.parse(rawM);
-      // 間食フラグ（s）の後方互換マイグレーション
-      parsed.forEach(it => {
-        if (it.s === undefined) {
-          it.s = (it.cat === "飲料" || it.cat === "間食" || 
-                  it.name.includes('果物') || it.name.includes('ヨーグルト') || 
-                  it.name.includes('チーズ') || it.name.includes('おにぎり') || 
-                  it.name.includes('パン') || it.name.includes('チョコ') || 
-                  it.name.includes('スナック') || it.name.includes('和菓子') || 
-                  it.name.includes('ケーキ') || it.name.includes('アイス'));
+      const merged = [];
+
+      defaultMenus.forEach(defItem => {
+        const found = parsed.find(p => p.name === defItem.name || p.id === defItem.id);
+        if (found) {
+          merged.push({
+            id: defItem.id,
+            cat: defItem.cat,
+            name: defItem.name,
+            m: found.m !== undefined ? found.m : defItem.m,
+            l: found.l !== undefined ? found.l : defItem.l,
+            d: found.d !== undefined ? found.d : defItem.d,
+            s: found.s !== undefined ? found.s : (defItem.s !== undefined ? defItem.s : false),
+            ln: found.ln !== undefined ? found.ln : (defItem.ln !== undefined ? defItem.ln : false),
+            cal: defItem.cal,
+            salt: defItem.salt
+          });
+        } else {
+          merged.push(JSON.parse(JSON.stringify(defItem)));
         }
       });
-      menuMaster = parsed;
+
+      menuMaster = merged;
+      localStorage.setItem(MASTER_KEY_MENUS, JSON.stringify(menuMaster));
     } catch (e) {
       menuMaster = JSON.parse(JSON.stringify(defaultMenus));
     }
   } else {
     menuMaster = JSON.parse(JSON.stringify(defaultMenus));
+    localStorage.setItem(MASTER_KEY_MENUS, JSON.stringify(menuMaster));
   }
 }
 
@@ -1004,24 +1017,46 @@ function getShortChipLabel(item) {
   return n;
 }
 
-// 食事入力チップの再構築（間食もチェックフラグ s で完全連動）
+// 🏛️ 恒久設計：食品の料理的性質（主食/汁物/おかず/飲料）を正規化する共通マッピング関数
+// （catが間食や夜食であっても、朝・昼・晩の4基本枠のいずれかに漏れなく100%割り当てる）
+function getMealSectionCategory(item) {
+  if (item.cat === "主食" || item.name.includes("麺") || item.name.includes("茶漬け") || item.name.includes("雑炊") || item.name.includes("丼") || item.name.includes("寿司") || item.name.includes("カレー") || item.name.includes("炒飯")) {
+    return "主食";
+  }
+  if (item.cat === "汁物") {
+    return "汁物";
+  }
+  if (item.cat === "飲料") {
+    return "飲料";
+  }
+  // 上記以外（おかず、間食由来の果物・和菓子・スイーツ、夜食由来のナッツ等）はすべて副菜・おかず枠へ集約
+  return "おかず";
+}
+
+// 食事入力チップの再構築（朝・昼・晩・間食・夜食 全スロット完全連動）
 function rebuildAllInputChips() {
-  buildCategoryChips('m_chips_main', 'morning', menuMaster.filter(x => x.m && x.cat === "主食"));
-  buildCategoryChips('m_chips_soup', 'morning', menuMaster.filter(x => x.m && x.cat === "汁物"));
-  buildCategoryChips('m_chips_side', 'morning', menuMaster.filter(x => x.m && x.cat === "おかず"));
-  buildCategoryChips('m_chips_drink', 'morning', menuMaster.filter(x => x.m && x.cat === "飲料"));
+  // 朝食（主食・汁物・おかず・飲料の4枠へ漏れなくマッピング）
+  buildCategoryChips('m_chips_main', 'morning', menuMaster.filter(x => x.m && getMealSectionCategory(x) === "主食"));
+  buildCategoryChips('m_chips_soup', 'morning', menuMaster.filter(x => x.m && getMealSectionCategory(x) === "汁物"));
+  buildCategoryChips('m_chips_side', 'morning', menuMaster.filter(x => x.m && getMealSectionCategory(x) === "おかず"));
+  buildCategoryChips('m_chips_drink', 'morning', menuMaster.filter(x => x.m && getMealSectionCategory(x) === "飲料"));
 
-  buildCategoryChips('l_chips_main', 'lunch', menuMaster.filter(x => x.l && x.cat === "主食"));
-  buildCategoryChips('l_chips_soup', 'lunch', menuMaster.filter(x => x.l && x.cat === "汁物"));
-  buildCategoryChips('l_chips_side', 'lunch', menuMaster.filter(x => x.l && x.cat === "おかず"));
-  buildCategoryChips('l_chips_drink', 'lunch', menuMaster.filter(x => x.l && x.cat === "飲料"));
+  // 昼食（主食・汁物・おかず・飲料の4枠へ漏れなくマッピング）
+  buildCategoryChips('l_chips_main', 'lunch', menuMaster.filter(x => x.l && getMealSectionCategory(x) === "主食"));
+  buildCategoryChips('l_chips_soup', 'lunch', menuMaster.filter(x => x.l && getMealSectionCategory(x) === "汁物"));
+  buildCategoryChips('l_chips_side', 'lunch', menuMaster.filter(x => x.l && getMealSectionCategory(x) === "おかず"));
+  buildCategoryChips('l_chips_drink', 'lunch', menuMaster.filter(x => x.l && getMealSectionCategory(x) === "飲料"));
 
-  buildCategoryChips('d_chips_main', 'dinner', menuMaster.filter(x => x.d && x.cat === "主食"));
-  buildCategoryChips('d_chips_soup', 'dinner', menuMaster.filter(x => x.d && x.cat === "汁物"));
-  buildCategoryChips('d_chips_side', 'dinner', menuMaster.filter(x => x.d && x.cat === "おかず"));
-  buildCategoryChips('d_chips_drink', 'dinner', menuMaster.filter(x => x.d && x.cat === "飲料"));
+  // 夕食（主食・汁物・おかず・飲料の4枠へ漏れなくマッピング）
+  buildCategoryChips('d_chips_main', 'dinner', menuMaster.filter(x => x.d && getMealSectionCategory(x) === "主食"));
+  buildCategoryChips('d_chips_soup', 'dinner', menuMaster.filter(x => x.d && getMealSectionCategory(x) === "汁物"));
+  buildCategoryChips('d_chips_side', 'dinner', menuMaster.filter(x => x.d && getMealSectionCategory(x) === "おかず"));
+  buildCategoryChips('d_chips_drink', 'dinner', menuMaster.filter(x => x.d && getMealSectionCategory(x) === "飲料"));
 
+  // 間食・カフェ休憩（設定でチェックされた全品目を確実に反映）
   buildCategoryChips('snack_chips', 'snack', menuMaster.filter(x => x.s));
+
+  // 夜食・深夜飲食（設定でチェックされた全品目を確実に反映）
   buildCategoryChips('latenight_chips', 'latenight', menuMaster.filter(x => x.ln));
 
   rebuildMedChipsUI();
@@ -2401,18 +2436,30 @@ function importFullJSON(event) {
       }
 
       if (data.menus && Array.isArray(data.menus)) {
-        let mergedMenus = data.menus;
-        mergedMenus.forEach(it => {
-          if (it.s === undefined) {
-            it.s = (it.cat === "飲料" || it.cat === "間食" || 
-                    it.name.includes('果物') || it.name.includes('ヨーグルト') || 
-                    it.name.includes('チーズ') || it.name.includes('おにぎり') || 
-                    it.name.includes('パン') || it.name.includes('チョコ') || 
-                    it.name.includes('スナック') || it.name.includes('和菓子') || 
-                    it.name.includes('ケーキ') || it.name.includes('アイス'));
+        const defaultMenus = (typeof DEFAULT_50_MENUS !== 'undefined') ? DEFAULT_50_MENUS : [];
+        const merged = [];
+
+        defaultMenus.forEach(defItem => {
+          const found = data.menus.find(p => p.name === defItem.name || p.id === defItem.id);
+          if (found) {
+            merged.push({
+              id: defItem.id,
+              cat: defItem.cat,
+              name: defItem.name,
+              m: found.m !== undefined ? found.m : defItem.m,
+              l: found.l !== undefined ? found.l : defItem.l,
+              d: found.d !== undefined ? found.d : defItem.d,
+              s: found.s !== undefined ? found.s : (defItem.s !== undefined ? defItem.s : false),
+              ln: found.ln !== undefined ? found.ln : (defItem.ln !== undefined ? defItem.ln : false),
+              cal: defItem.cal,
+              salt: defItem.salt
+            });
+          } else {
+            merged.push(JSON.parse(JSON.stringify(defItem)));
           }
         });
-        menuMaster = mergedMenus;
+
+        menuMaster = merged;
         localStorage.setItem(MASTER_KEY_MENUS, JSON.stringify(menuMaster));
       }
 
