@@ -70,6 +70,7 @@
     .btn:active { transform: scale(0.97); }
     .btn-blue { background: linear-gradient(135deg, #0284c7, #2563eb); color: #ffffff; }
     .btn-green { background: linear-gradient(135deg, #059669, #10b981); color: #ffffff; }
+    .btn-amber { background: linear-gradient(135deg, #d97706, #f59e0b); color: #ffffff; }
     .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-main); }
     .btn-outline:hover { border-color: var(--accent-blue); color: var(--accent-blue); }
     .btn-move { background: rgba(56, 189, 248, 0.15); border: 1px solid var(--border); color: var(--accent-blue); font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; cursor: pointer; font-weight: bold; }
@@ -205,6 +206,15 @@
     .conf-doc { border-left: 3px solid var(--accent-blue); padding-left: 10px; margin-bottom: 12px; }
     .conf-nut { border-left: 3px solid var(--accent-green); padding-left: 10px; }
 
+    /* 経年マトリクステーブル */
+    .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; text-align: left; }
+    .matrix-table th, .matrix-table td { padding: 7px 10px; border-bottom: 1px solid rgba(40, 54, 84, 0.5); }
+    .matrix-table th { background: #080d1a; color: var(--text-muted); font-weight: 800; white-space: nowrap; }
+    .matrix-table tr:hover { background: rgba(56, 189, 248, 0.05); }
+    .matrix-cat-row { background: rgba(24, 34, 53, 0.9); font-weight: 800; color: var(--accent-blue); }
+    .matrix-val-high { color: var(--accent-rose); font-weight: bold; }
+    .matrix-val-normal { color: #ffffff; }
+
     /* TAB 4: 医師提出用 A4クリニック・レポート */
     .report-preview-wrap {
       background: #ffffff; color: #1e293b; border-radius: 8px;
@@ -279,6 +289,7 @@
       <button class="tab-btn active" data-tab="masterTab" onclick="switchViewerTab('masterTab')">⚙️ 臨床マスタ管理室</button>
       <button class="tab-btn" data-tab="consultTab" onclick="switchViewerTab('consultTab')">💬 AI総合相談室</button>
       <button class="tab-btn" data-tab="analysisTab" onclick="switchViewerTab('analysisTab')">📊 多角ダッシュボード</button>
+      <button class="tab-btn" data-tab="checkupTab" onclick="switchViewerTab('checkupTab')">🧪 健診経年アナリティクス</button>
       <button class="tab-btn" data-tab="reportTab" onclick="switchViewerTab('reportTab')">🖨️ 医師提出用A4レポート</button>
     </nav>
 
@@ -286,9 +297,9 @@
       <div class="data-source-indicator" id="syncStatusBadge">
         <span style="font-size:0.9rem;">●</span> <span id="syncStatusText">ローカル同期中</span>
       </div>
-      <button class="btn btn-outline" onclick="document.getElementById('viewerJsonInput').click()">📂 JSON読込</button>
+      <button class="btn btn-outline" onclick="document.getElementById('viewerJsonInput').click()">📂 丸ごとJSON読込</button>
       <input type="file" id="viewerJsonInput" accept=".json" style="display:none;" onchange="importViewerJSON(event)">
-      <button class="btn btn-green" onclick="exportViewerJSON()">💾 JSON保存</button>
+      <button class="btn btn-green" onclick="exportViewerJSON()">💾 丸ごとJSON保存</button>
       <button class="btn btn-blue" onclick="window.print()">🖨️ レポート印刷/PDF</button>
     </div>
   </div>
@@ -313,7 +324,7 @@
       <div class="sync-steps-grid">
         <div class="sync-step-item">
           <div class="sync-step-num">①［PCで編集する前］</div>
-          スマホの設定画面で<b>「💾 丸ごと保存(JSON)」</b>を押し、そのファイルをPCに送って上の<b>「📂 JSON読込」</b>で取り込みます。<br>
+          スマホの設定画面で<b>「💾 丸ごと保存(JSON)」</b>を押し、そのファイルをPCに送って上の<b>「📂 丸ごとJSON読込」</b>で取り込みます。<br>
           <span style="color:var(--accent-amber); font-weight:bold;">★必ず最新のスマホ記録を取り込んでから編集してください！</span>
         </div>
         <div class="sync-step-item">
@@ -323,7 +334,7 @@
         </div>
         <div class="sync-step-item">
           <div class="sync-step-num">③［スマホに戻す］</div>
-          右上の<b>「💾 JSON保存」</b>を押して新ファイルを保存し、スマホに送ってスマホ設定画面で<b>「📂 丸ごと復元(JSON)」</b>します。<br>
+          右上の<b>「💾 丸ごとJSON保存」</b>を押して新ファイルを保存し、スマホに送ってスマホ設定画面で<b>「📂 丸ごと復元(JSON)」</b>します。<br>
           <span style="color:var(--accent-green); font-weight:bold;">★これで日々の記録を1件も失わずにスマホへ最新のお薬・臨床設定が反映されます！</span>
         </div>
       </div>
@@ -371,47 +382,73 @@
     <div class="card no-print" style="border-left: 3px solid var(--accent-amber);">
       <div class="card-title">
         <span>🧪 直近 人間ドック・定期血液検査値 ストックカルテ</span>
-        <span style="font-size:0.72rem; color:var(--accent-green); font-weight:bold;" id="labAutoSaveNotice">✅ 自動保存中</span>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <span style="font-size:0.72rem; color:var(--accent-green); font-weight:bold;" id="labAutoSaveNotice">✅ 自動保存中</span>
+          <button class="btn btn-outline" style="font-size:0.72rem; padding:3px 8px; color:var(--accent-blue); border-color:var(--accent-blue);" onclick="exportCheckupSoloJSON()">🧪 健診JSON保存</button>
+          <button class="btn btn-outline" style="font-size:0.72rem; padding:3px 8px;" onclick="document.getElementById('checkupSoloJsonInput').click()">📂 健診JSON読込</button>
+          <input type="file" id="checkupSoloJsonInput" accept=".json" style="display:none;" onchange="importCheckupSoloJSON(event)">
+          <button class="btn btn-amber" style="font-size:0.72rem; padding:3px 8px;" onclick="loadPresetCheckupData()">📋 今回の健診データ(3年分)を自動反映</button>
+        </div>
       </div>
       <div style="font-size:0.74rem; color:var(--text-muted); margin-bottom:10px; line-height:1.5;">
         ※直近の健診結果数値を入力しておくと、AIが血圧や食塩摂取量、PFC栄養バランスと掛け合わせて多角的にリスク評価を行います。<br>
-        ※空欄の項目があっても問題ありません。数字を入力した瞬間にリアルタイムで自動保存されます。
+        ※空欄の項目があっても問題ありません。数字を入力した瞬間にリアルタイムで自動保存されます。<br>
+        ※<b>「🧪 健診JSON保存」「📂 健診JSON読込」</b>により、日々の記録とは完全に分離して人間ドックデータだけをバックアップ・移行できます。
       </div>
       
-      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-        <span class="filter-label">受診日 (健診年月日):</span>
-        <input type="date" id="lab_checkDate" class="form-input" style="width:150px;" onchange="autoSaveClinicalHistory()">
+      <div style="display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:10px; background:var(--bg-card-sub); padding:8px 12px; border-radius:6px; border:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="filter-label">受診日 (健診年月日):</span>
+          <input type="date" id="lab_checkDate" class="form-input" style="width:145px;" onchange="autoSaveClinicalHistory()">
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="filter-label">腹囲:</span>
+          <input type="number" step="0.1" id="lab_waist" class="form-input" style="width:80px;" placeholder="90.0" oninput="autoSaveClinicalHistory()">
+          <span style="font-size:0.72rem; color:var(--text-muted);">cm</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="filter-label">メタボ判定:</span>
+          <input type="text" id="lab_metabolicJudge" class="form-input" style="width:120px;" placeholder="例: 予備群該当" oninput="autoSaveClinicalHistory()">
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="filter-label">心電図所見:</span>
+          <input type="text" id="lab_ecg" class="form-input" style="width:160px;" placeholder="例: 完全右脚ブロック" oninput="autoSaveClinicalHistory()">
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span class="filter-label">眼底KW:</span>
+          <input type="text" id="lab_fundus" class="form-input" style="width:90px;" placeholder="例: 左右0" oninput="autoSaveClinicalHistory()">
+        </div>
       </div>
 
       <div class="grid-6" style="margin-bottom:10px;">
         <div class="stat-box" style="padding:8px 10px;">
           <span class="stat-label">LDLコレステロール</span>
-          <input type="number" step="1" id="lab_ldl" class="form-input" style="margin-top:4px;" placeholder="例: 85" oninput="autoSaveClinicalHistory()">
+          <input type="number" step="1" id="lab_ldl" class="form-input" style="margin-top:4px;" placeholder="例: 165" oninput="autoSaveClinicalHistory()">
           <span class="stat-sub" style="margin-top:2px;">基準: &lt;120 (冠動脈後&lt;70)</span>
         </div>
         <div class="stat-box" style="padding:8px 10px;">
           <span class="stat-label">HDLコレステロール</span>
-          <input type="number" step="1" id="lab_hdl" class="form-input" style="margin-top:4px;" placeholder="例: 55" oninput="autoSaveClinicalHistory()">
+          <input type="number" step="1" id="lab_hdl" class="form-input" style="margin-top:4px;" placeholder="例: 62" oninput="autoSaveClinicalHistory()">
           <span class="stat-sub" style="margin-top:2px;">基準: &gt;40 mg/dL</span>
         </div>
         <div class="stat-box" style="padding:8px 10px;">
           <span class="stat-label">中性脂肪 (TG)</span>
-          <input type="number" step="1" id="lab_tg" class="form-input" style="margin-top:4px;" placeholder="例: 130" oninput="autoSaveClinicalHistory()">
+          <input type="number" step="1" id="lab_tg" class="form-input" style="margin-top:4px;" placeholder="例: 87" oninput="autoSaveClinicalHistory()">
           <span class="stat-sub" style="margin-top:2px;">基準: &lt;150 mg/dL</span>
         </div>
         <div class="stat-box" style="padding:8px 10px;">
           <span class="stat-label">空腹時血糖 (FPG)</span>
-          <input type="number" step="1" id="lab_fpg" class="form-input" style="margin-top:4px;" placeholder="例: 98" oninput="autoSaveClinicalHistory()">
+          <input type="number" step="1" id="lab_fpg" class="form-input" style="margin-top:4px;" placeholder="例: 103" oninput="autoSaveClinicalHistory()">
           <span class="stat-sub" style="margin-top:2px;">基準: &lt;100 mg/dL</span>
         </div>
         <div class="stat-box" style="padding:8px 10px;">
           <span class="stat-label">HbA1c (NGSP)</span>
-          <input type="number" step="0.1" id="lab_hba1c" class="form-input" style="margin-top:4px;" placeholder="例: 5.6" oninput="autoSaveClinicalHistory()">
+          <input type="number" step="0.1" id="lab_hba1c" class="form-input" style="margin-top:4px;" placeholder="例: 6.0" oninput="autoSaveClinicalHistory()">
           <span class="stat-sub" style="margin-top:2px;">基準: &lt;6.0 %</span>
         </div>
         <div class="stat-box" style="padding:8px 10px;">
           <span class="stat-label">推算GFR (eGFR)</span>
-          <input type="number" step="0.1" id="lab_egfr" class="form-input" style="margin-top:4px;" placeholder="例: 68.5" oninput="autoSaveClinicalHistory()">
+          <input type="number" step="0.1" id="lab_egfr" class="form-input" style="margin-top:4px;" placeholder="例: 72.0" oninput="autoSaveClinicalHistory()">
           <span class="stat-sub" style="margin-top:2px;">基準: &gt;60 mL/min</span>
         </div>
       </div>
@@ -419,31 +456,34 @@
       <div class="grid-6" style="margin-bottom:10px;">
         <div class="stat-box" style="padding:8px 10px;">
           <span class="stat-label">血清クレアチニン</span>
-          <input type="number" step="0.01" id="lab_cre" class="form-input" style="margin-top:4px;" placeholder="例: 0.92" oninput="autoSaveClinicalHistory()">
+          <input type="number" step="0.01" id="lab_cre" class="form-input" style="margin-top:4px;" placeholder="例: 0.84" oninput="autoSaveClinicalHistory()">
           <span class="stat-sub" style="margin-top:2px;">男性基準: &lt;1.00</span>
         </div>
         <div class="stat-box" style="padding:8px 10px;">
-          <span class="stat-label">尿酸値 (UA)</span>
-          <input type="number" step="0.1" id="lab_ua" class="form-input" style="margin-top:4px;" placeholder="例: 6.2" oninput="autoSaveClinicalHistory()">
-          <span class="stat-sub" style="margin-top:2px;">基準: &lt;7.0 mg/dL</span>
+          <span class="stat-label">赤血球数 / Hb</span>
+          <div style="display:flex; gap:3px; margin-top:4px;">
+            <input type="number" step="1" id="lab_rbc" class="form-input" style="width:50%;" placeholder="473" oninput="autoSaveClinicalHistory()">
+            <input type="number" step="0.1" id="lab_hb" class="form-input" style="width:50%;" placeholder="15.7" oninput="autoSaveClinicalHistory()">
+          </div>
+          <span class="stat-sub" style="margin-top:2px;">基準: 400-539 / 13.1-16.6</span>
         </div>
         <div class="stat-box" style="padding:8px 10px;">
           <span class="stat-label">AST (GOT)</span>
-          <input type="number" step="1" id="lab_ast" class="form-input" style="margin-top:4px;" placeholder="例: 22" oninput="autoSaveClinicalHistory()">
+          <input type="number" step="1" id="lab_ast" class="form-input" style="margin-top:4px;" placeholder="例: 26" oninput="autoSaveClinicalHistory()">
           <span class="stat-sub" style="margin-top:2px;">基準: &lt;30 U/L</span>
         </div>
         <div class="stat-box" style="padding:8px 10px;">
           <span class="stat-label">ALT (GPT)</span>
-          <input type="number" step="1" id="lab_alt" class="form-input" style="margin-top:4px;" placeholder="例: 26" oninput="autoSaveClinicalHistory()">
+          <input type="number" step="1" id="lab_alt" class="form-input" style="margin-top:4px;" placeholder="例: 30" oninput="autoSaveClinicalHistory()">
           <span class="stat-sub" style="margin-top:2px;">基準: &lt;30 U/L</span>
         </div>
         <div class="stat-box" style="padding:8px 10px;">
           <span class="stat-label">γ-GTP (肝機能)</span>
-          <input type="number" step="1" id="lab_ggtp" class="form-input" style="margin-top:4px;" placeholder="例: 45" oninput="autoSaveClinicalHistory()">
+          <input type="number" step="1" id="lab_ggtp" class="form-input" style="margin-top:4px;" placeholder="例: 84" oninput="autoSaveClinicalHistory()">
           <span class="stat-sub" style="margin-top:2px;">基準: &lt;50 U/L</span>
         </div>
         <div class="stat-box" style="padding:8px 10px;">
-          <span class="stat-label">尿蛋白 / 尿潜血</span>
+          <span class="stat-label">尿蛋白 / 尿糖</span>
           <input type="text" id="lab_urine" class="form-input" style="margin-top:4px;" placeholder="例: (-), (-)" oninput="autoSaveClinicalHistory()">
           <span class="stat-sub" style="margin-top:2px;">正常: 陰性(-)</span>
         </div>
@@ -451,7 +491,7 @@
 
       <div>
         <label class="filter-label" style="display:block; margin-bottom:4px;">健診総合所見・医師コメント・判定メモ:</label>
-        <input type="text" id="lab_doctorComment" class="form-input" style="width:100%;" placeholder="例: 脂質・血圧ともに内服治療にて良好にコントロール。頸動脈エコー軽度プラークあり現状維持。" oninput="autoSaveClinicalHistory()">
+        <input type="text" id="lab_doctorComment" class="form-input" style="width:100%;" placeholder="例: メタボリック症候群に該当しません。しかし予備軍に入ります。かかりつけ医がある場合、相談して下さい。" oninput="autoSaveClinicalHistory()">
       </div>
     </div>
 
@@ -588,7 +628,7 @@
       </div>
 
       <div class="consultation-input-row">
-        <textarea id="aiConsultationInput" class="consultation-textarea" placeholder="例: 「お昼に定食屋で生姜焼きと奥さんの作った味噌汁、明太子ご飯を食べたけど、どれを登録すればいい？」「降圧剤とお酒の飲み合わせについて教えて」「直近のLDLが85でステント治療歴があるが、朝の血圧はどのくらいを目指すべき？」"></textarea>
+        <textarea id="aiConsultationInput" class="consultation-textarea" placeholder="例: 「お昼に定食屋で生姜焼きと奥さんの作った味噌汁、明太子ご飯を食べたけど、どれを登録すればいい？」「降圧剤とお酒の飲み合わせについて教えて」「直近のLDLが165でステント治療歴があるが、朝の血圧や食事の目標は？」"></textarea>
         <button class="btn btn-blue" id="btnConsultAi" style="padding:0 24px; font-size:0.9rem;" onclick="runAiConsultation()">✨ AIに質問・相談する</button>
       </div>
 
@@ -710,7 +750,134 @@
 
 
   <!-- =========================================================
-       TAB 4: 医師提出用 A4クリニック・レポート
+       TAB 4: 🧪 健診経年アナリティクス（新設：3〜4カ年推移・グラフ・臓器別評価）
+       ========================================================= -->
+  <section id="checkupTab" class="tab-content">
+    
+    <!-- 健診アナリティクス上部 ツールバー -->
+    <div class="filter-bar no-print">
+      <div class="filter-group">
+        <span class="filter-label" style="font-size:0.85rem; color:#ffffff;">🧪 人間ドック・特定健診 経年クリニカル・アナリティクス</span>
+        <span style="font-size:0.72rem; color:var(--accent-green); background:rgba(52,211,153,0.15); padding:2px 8px; border-radius:4px;" id="checkupYearsCountBadge">3カ年データ蓄積中</span>
+      </div>
+
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button class="btn btn-outline" style="font-size:0.74rem; color:var(--accent-blue); border-color:var(--accent-blue);" onclick="exportCheckupSoloJSON()">🧪 健診JSON保存</button>
+        <button class="btn btn-outline" style="font-size:0.74rem;" onclick="document.getElementById('checkupSoloJsonInputTab').click()">📂 健診JSON読込</button>
+        <input type="file" id="checkupSoloJsonInputTab" accept=".json" style="display:none;" onchange="importCheckupSoloJSON(event)">
+        <button class="btn btn-amber" style="font-size:0.74rem;" onclick="loadPresetCheckupData()">📋 今回の健診データ(3年分)を自動反映</button>
+        <button class="btn btn-green" style="font-size:0.74rem;" onclick="runCheckupAiReview()">🤖 経年ドック総合アセスメント</button>
+      </div>
+    </div>
+
+    <!-- Dr.ケン＆管理栄養士アヤの「経年ドック総合アセスメント」カード -->
+    <div class="ai-consultation-card no-print">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:0.95rem; font-weight:800; color:#ffffff;">🩺 専任医療チーム 経年ドック総合アセスメント (Dr.ケン ＆ 管理栄養士 アヤ)</span>
+        <span style="font-size:0.72rem; color:var(--accent-blue);" id="checkupAiStatusLabel">公立昭和病院 健診推移を解析済み</span>
+      </div>
+      <div class="consultation-output-box" id="checkupAiReviewOutputArea">
+        「経年ドック総合アセスメント」を実行すると、過去3〜4年分の脂質（LDL・LH比）、糖代謝（HbA1c）、肝機能（γ-GTP）、心電図（完全右脚ブロック）、腹囲・BMIの経年変化を踏まえた専門医・栄養士の総合講評を表示します。
+      </div>
+    </div>
+
+    <!-- 4大テーマ別 経年トレンドグラフ (2x2 グリッド) -->
+    <div class="grid-2">
+      <!-- グラフ 1: 脂質プロファイル ＆ 血圧トレンド -->
+      <div class="card">
+        <div class="card-title">
+          <span>🫀 ① 動脈硬化・脂質プロファイル ＆ 血圧経年トレンド</span>
+          <span style="font-size:0.72rem; color:var(--text-muted);">LDL(赤) / HDL(青) / TG(緑) / LH比(破線)</span>
+        </div>
+        <div class="chart-container-large"><canvas id="checkupLipidChart"></canvas></div>
+      </div>
+
+      <!-- グラフ 2: 耐糖能 ＆ メタボ体型トレンド -->
+      <div class="card">
+        <div class="card-title">
+          <span>🍚 ② 耐糖能（HbA1c・血糖）＆ メタボ体型（腹囲・体重）</span>
+          <span style="font-size:0.72rem; color:var(--text-muted);">HbA1c(黄) / 血糖(オレンジ) / 腹囲(青) / 体重(水色)</span>
+        </div>
+        <div class="chart-container-large"><canvas id="checkupGlucoseBodyChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <!-- グラフ 3: 肝機能 ＆ アルコール代謝トレンド -->
+      <div class="card">
+        <div class="card-title">
+          <span>🍺 ③ 肝機能（γ-GTP・AST・ALT）経年トレンド</span>
+          <span style="font-size:0.72rem; color:var(--text-muted);">γ-GTP(紫) / AST(青) / ALT(緑) ─ 基準: 50/30/30</span>
+        </div>
+        <div class="chart-container-large"><canvas id="checkupLiverChart"></canvas></div>
+      </div>
+
+      <!-- グラフ 4: 腎機能 ＆ 造血・血管老化トレンド -->
+      <div class="card">
+        <div class="card-title">
+          <span>💧 ④ 腎機能（eGFR・クレアチニン）＆ 血色素 (Hb)</span>
+          <span style="font-size:0.72rem; color:var(--text-muted);">eGFR(エメラルド) / Cre(赤) / Hb(ローズ)</span>
+        </div>
+        <div class="chart-container-large"><canvas id="checkupKidneyChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- 過去4カ年 経年比較マトリクス表 -->
+    <div class="card">
+      <div class="card-title">
+        <span>📋 人間ドック・特定健診 過去4カ年 検査項目マトリクス比較表</span>
+        <span style="font-size:0.72rem; color:var(--text-muted);">※赤字は基準値超過（Hフラグ項目）</span>
+      </div>
+      <div class="table-scroll" style="max-height: 520px;">
+        <table class="matrix-table" id="checkupMatrixTable">
+          <thead>
+            <tr>
+              <th style="width:130px;">検査大区分</th>
+              <th style="width:180px;">検査項目</th>
+              <th style="width:110px;" class="center">今回 (2025/11)</th>
+              <th style="width:110px;" class="center">前回 (2024/12)</th>
+              <th style="width:110px;" class="center">前々回 (2023/11)</th>
+              <th style="width:110px;" class="center">4年前 (未登録)</th>
+              <th style="width:160px;">至適・基準値</th>
+              <th>臨床判定・アドバイス</th>
+            </tr>
+          </thead>
+          <tbody id="checkupMatrixTableBody">
+            <!-- viewer_logic.js から動的描画 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 心電図・眼底・医師所見 経年追跡カード -->
+    <div class="card">
+      <div class="card-title">
+        <span>🔍 心電図・眼底検査・メタボ判定・医師所見 経年推移記録</span>
+      </div>
+      <div class="table-scroll">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th style="width:90px;">年度</th>
+              <th style="width:110px;">受診日</th>
+              <th style="width:160px;">メタボ判定</th>
+              <th style="width:200px;">心電図所見</th>
+              <th style="width:140px;">眼底 (KW分類)</th>
+              <th>健診担当医の総合判断・コメント</th>
+            </tr>
+          </thead>
+          <tbody id="checkupFindingsTableBody">
+            <!-- viewer_logic.js から動的描画 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+
+  <!-- =========================================================
+       TAB 5: 医師提出用 A4クリニック・レポート
        ========================================================= -->
   <section id="reportTab" class="tab-content">
     
@@ -741,9 +908,9 @@
 
       <div class="rep-profile-grid">
         <div class="rep-prof-item">年代/性別: <b id="repAgeGender">50代 男性</b></div>
-        <div class="rep-prof-item">身長/直近体重: <b id="repHeightWeight">172.0 cm / 68.0 kg</b></div>
-        <div class="rep-prof-item">BMI / 適正体重: <b id="repBmiStd">23.0 (適正 65.1kg)</b></div>
-        <div class="rep-prof-item">重点管理: <b id="repCares">高血圧, 脂質異常症</b></div>
+        <div class="rep-prof-item">身長/直近体重: <b id="repHeightWeight">176.0 cm / 81.2 kg</b></div>
+        <div class="rep-prof-item">BMI / 適正体重: <b id="repBmiStd">26.2 (適正 68.1kg)</b></div>
+        <div class="rep-prof-item">重点管理: <b id="repCares">高血圧, 脂質異常症, 境界型耐糖能</b></div>
       </div>
 
       <div class="rep-clinical-history-bar" id="repClinicalHistoryBar">
