@@ -1,6 +1,7 @@
+
 // =========================================================
 // 健康管理くん - スマホ専任 コア・ロジック (mobile_logic.js)
-// 共通食品辞書連携・間食マスタ設定・朝体重優先・アルコール合算採点
+// 共通食品辞書連携・体重実測オートズーム・寝落ちアシスト・未入力限定スマート通知
 // =========================================================
 
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
@@ -190,6 +191,11 @@ let sentNotificationsToday = {};
 let currentTipIndex = 0;
 let toastTimeoutId = null;
 
+// 体重グラフ：実測ズーム表示フラグ（デフォルト: true で実測フォーカス）
+let isWeightZoomed = true;
+// 前日寝落ち復帰中フラグ
+let isRecoveringYesterday = false;
+
 let currentSelections = { morning: [], lunch: [], dinner: [], snack: [], latenight: [] };
 let currentMeds = { morning: [], lunch: [], dinner: [], night: [] };
 
@@ -198,6 +204,13 @@ let activeNumpadInputEl = null;
 function getTodayString() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function getYesterdayString(dateStr = getTodayString()) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dateObj = new Date(y, m - 1, d);
+  dateObj.setDate(dateObj.getDate() - 1);
+  return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
 }
 
 function getCurrentTimeString() {
@@ -335,6 +348,81 @@ function rotateTodayHealthTip() {
   displayHealthTipByIndex(currentTipIndex);
 }
 
+// 🛌 昨晩寝落ちクイックアシスト判定（朝〜昼起動時に前夜未入力ならバナー表示）
+function checkYesterdayNightStatus() {
+  const banner = document.getElementById('yesterdayRecoveryBanner');
+  if (!banner) return;
+
+  const todayStr = getTodayString();
+  const currentHour = new Date().getHours();
+
+  // 朝〜昼の時間帯（5:00〜14:00）で、選択日が「今日」の場合にチェック
+  if (activeDate === todayStr && currentHour >= 5 && currentHour < 15) {
+    const yStr = getYesterdayString(todayStr);
+    const yRec = allRecords[yStr] || {};
+    const yNight = yRec.night || {};
+
+    // 昨日の就寝前が未記録の場合
+    if (!yNight.time) {
+      banner.classList.add('show');
+      return;
+    }
+  }
+
+  banner.classList.remove('show');
+}
+
+function jumpToYesterdayNight() {
+  const todayStr = getTodayString();
+  const yStr = getYesterdayString(todayStr);
+  
+  isRecoveringYesterday = true;
+  dismissYesterdayRecoveryBanner();
+
+  changeActiveDate(yStr);
+
+  setTimeout(() => {
+    setSlotCardCollapsed('night', false);
+    const nightSlot = document.getElementById('slot-night');
+    if (nightSlot) {
+      nightSlot.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    showSmartToast("🛌 昨日の就寝前を開きました", "昨晩の歩数・血圧・メモを入力して保存してください。完了後、すぐ今朝へ復帰できます。");
+  }, 150);
+}
+
+function dismissYesterdayRecoveryBanner() {
+  const banner = document.getElementById('yesterdayRecoveryBanner');
+  if (banner) banner.classList.remove('show');
+}
+
+function returnToTodayMorning() {
+  isRecoveringYesterday = false;
+  closePraiseModal();
+
+  const todayStr = getTodayString();
+  changeActiveDate(todayStr);
+
+  setTimeout(() => {
+    setSlotCardCollapsed('morning', false);
+    const morningSlot = document.getElementById('slot-morning');
+    if (morningSlot) {
+      morningSlot.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    showSmartToast("☀️ 今朝の記録へ戻りました", "昨晩の入力お疲れ様でした！今朝の血圧や睡眠時間をサッと記録しましょう。");
+  }, 150);
+}
+
+// 🔍 体重グラフ：実測ズーム ↔ 全体目標 トグル切替
+function toggleWeightChartZoom() {
+  isWeightZoomed = !isWeightZoomed;
+  const btn = document.getElementById('btnToggleWeightZoom');
+  if (btn) {
+    btn.textContent = isWeightZoomed ? "🔍 目標全体表示" : "🔍 実測ズーム";
+  }
+  refreshDashboard();
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   loadSettings();
   loadProfile();
@@ -359,6 +447,16 @@ window.addEventListener('DOMContentLoaded', () => {
 
   initDesktopNotifications();
   initSmartNumpadListeners();
+
+  checkYesterdayNightStatus();
+
+  // スマホ復帰時（画面点灯時や別アプリからの復帰時）の未入力スマート再チェック
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkYesterdayNightStatus();
+      updateLiveSummary();
+    }
+  });
 });
 
 // =========================================================
@@ -496,7 +594,7 @@ function initDesktopNotifications() {
 function updateNotificationBadge() {
   const badge = document.getElementById('notif_permission_badge');
   if (!badge) return;
-  badge.textContent = "画面内見守り稼働中";
+  badge.textContent = "未入力時スマート見守り稼働中";
   badge.className = "time-badge recorded";
 }
 
@@ -537,7 +635,7 @@ function triggerSmartNotification(title, body) {
 
 function enableDesktopNotification() {
   if (window.location.protocol === 'file:') {
-    showSmartToast("🩺 Dr.ケン (スマート見守り)", "ローカル環境で画面内トースト見守りが100%稼働しています！安心してご利用ください。");
+    showSmartToast("🩺 Dr.ケン (スマート見守り)", "画面内スマートトースト通知が有効です。未入力時のみ快適に見守りメッセージをお届けします！");
     return;
   }
   if (!("Notification" in window)) {
@@ -551,7 +649,7 @@ function enableDesktopNotification() {
       saveSettings();
       testDesktopNotification();
     } else {
-      showSmartToast("🩺 Dr.ケン (スマート見守り)", "画面内スマート見守りバナーが有効化されました。作業中も安心してお使いいただけます！");
+      showSmartToast("🩺 Dr.ケン (スマート見守り)", "画面内スマート見守りバナーが有効化されました。未入力時のみそっとお知らせします！");
     }
   });
 }
@@ -559,29 +657,70 @@ function enableDesktopNotification() {
 function testDesktopNotification() {
   triggerSmartNotification(
     "🩺 Dr.ケン (スマート見守り自己診断)",
-    "【診断成功◎】デスクワークお疲れ様です！椅子では骨盤を立てて坐骨で座り、深呼吸を2回しましょう。"
+    "【診断成功◎】デスクワークお疲れ様です！記録済みのときは邪魔せず完全サイレント、未入力のときだけ気づきをお届けします。"
   );
 }
 
+// 🔔 未入力時限定スマート通知（入力済みなら100%サイレント）
 function checkAndTriggerSmartNotification() {
   const now = new Date();
   const hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const today = getTodayString();
   if (!sentNotificationsToday[today]) sentNotificationsToday[today] = {};
 
+  const curRec = allRecords[today] || {};
+
   const schedules = [
-    { time: "07:30", key: "m_remind", title: "🌅 朝の健康チェック (Dr.ケン)", body: "おはようございます！起床時の睡眠時間・血圧をサッと記録して今日も良い一日を！" },
-    { time: "10:30", key: "water_am", title: "🪑 午前の一服＆坐骨リセット (Dr.ケン)", body: "コップ1杯の水分補給（0.25L）をどうぞ！丸めたタオルを腰に挟み、骨盤を垂直に立て直しましょう。" },
-    { time: "12:30", key: "l_remind", title: "☀️ 昼食の記録 (アヤ)", body: "お昼時ですね！卵や焼き鳥、麺類のつゆ残し減塩やソイラテの活用、意識してみてくださいね◎" },
-    { time: "15:30", key: "water_pm", title: "💆‍♂️ 肩こり＆目のリフレッシュ (Dr.ケン)", body: "午後の疲労ピークです！首の後ろのくぼみ（天柱）を5秒押し上げ、肩をストンと落として目を休めましょう。" },
-    { time: "19:30", key: "d_remind", title: "🌙 夕食とお酒のチェック (Dr.ケン)", body: "夕食はお済みですか？今夜は休肝日にできると血管と肝臓の修復が進みますよ。" },
-    { time: "20:30", key: "face_care", title: "✨ 1分表情筋リリース (アヤ)", body: "お風呂や食後のひと息に『舌回しアイロン』＆『眉間つまみ』！一日の表情のコリを解毒しましょう。" },
-    { time: "22:30", key: "n_remind", title: "🛌 就寝前の締めくくり (アヤ)", body: "今日も一日お疲れ様でした！就寝前記録を完了したら、スマホを置いて目を休めましょう。" }
+    {
+      time: "07:30", key: "m_remind",
+      checkUnrecorded: () => !curRec.morning?.time,
+      title: "🌅 朝の健康チェック (Dr.ケン)",
+      body: "おはようございます！朝の血圧・睡眠時間がまだでしたら、サッと1分で記録しましょう。"
+    },
+    {
+      time: "10:30", key: "water_am",
+      checkUnrecorded: () => (curRec.waterGlasses || 0) < 2,
+      title: "🪑 午前の一服＆水分補給 (Dr.ケン)",
+      body: "コップ1杯の水分補給（0.25L）をどうぞ！丸めたタオルを腰に挟み、骨盤を垂直に立て直しましょう。"
+    },
+    {
+      time: "12:30", key: "l_remind",
+      checkUnrecorded: () => !curRec.lunch?.time,
+      title: "☀️ 昼食の記録 (アヤ)",
+      body: "お昼時ですね！昼食の記録がまだでしたら、麺類のつゆ残しや野菜小鉢を意識して登録してくださいね◎"
+    },
+    {
+      time: "15:30", key: "water_pm",
+      checkUnrecorded: () => (curRec.waterGlasses || 0) < 3,
+      title: "💆‍♂️ 肩こり＆目のリフレッシュ (Dr.ケン)",
+      body: "午後の疲労ピークです！首の後ろのくぼみ（天柱）を5秒押し上げ、肩をストンと落として目を休めましょう。"
+    },
+    {
+      time: "19:30", key: "d_remind",
+      checkUnrecorded: () => !curRec.dinner?.time,
+      title: "🌙 夕食とお酒のチェック (Dr.ケン)",
+      body: "夕食はお済みですか？夕食の記録がまだでしたらどうぞ。今夜は休肝日にできると血管と肝臓の修復が進みます。"
+    },
+    {
+      time: "20:30", key: "face_care",
+      checkUnrecorded: () => true, // エクササイズは任意
+      title: "✨ 1分表情筋リリース (アヤ)",
+      body: "お風呂や食後のひと息に『舌回しアイロン』＆『眉間つまみ』！一日の表情のコリを解毒しましょう。"
+    },
+    {
+      time: "22:30", key: "n_remind",
+      checkUnrecorded: () => !curRec.night?.time,
+      title: "🛌 就寝前の締めくくり (アヤ)",
+      body: "今日も一日お疲れ様でした！就寝前の歩数や夜血圧を入れて、今夜もぐっすり休んでくださいね。"
+    }
   ];
 
   schedules.forEach(sc => {
     if (hm === sc.time && !sentNotificationsToday[today][sc.key]) {
-      triggerSmartNotification(sc.title, sc.body);
+      // 該当スロットが未入力の場合のみ通知を発動（入力済みなら完全サイレント）
+      if (sc.checkUnrecorded()) {
+        triggerSmartNotification(sc.title, sc.body);
+      }
       sentNotificationsToday[today][sc.key] = true;
     }
   });
@@ -878,7 +1017,7 @@ function checkAllMed(slot) {
   autoSaveField(slot);
 }
 
-// 🍱 食品メニューマスタ読み込み（共通 food_dict.js との完全自動同期＆後方互換マイグレーション）
+// 🍱 食品メニューマスタ読み込み
 function loadMenus() {
   const rawM = localStorage.getItem(MASTER_KEY_MENUS);
   const defaultMenus = (typeof DEFAULT_50_MENUS !== 'undefined') ? DEFAULT_50_MENUS : [];
@@ -953,7 +1092,6 @@ function resetMenusToDefault() {
   alert("初期設定にリセットしました。");
 }
 
-// 食事パーツ設定テーブル（朝・昼・晩・間・夜 5列チェック完全対応）
 function renderMenuMasterTable() {
   const tbody = document.getElementById('menuMasterTableBody');
   tbody.innerHTML = '';
@@ -1017,8 +1155,6 @@ function getShortChipLabel(item) {
   return n;
 }
 
-// 🏛️ 恒久設計：食品の料理的性質（主食/汁物/おかず/飲料）を正規化する共通マッピング関数
-// （catが間食や夜食であっても、朝・昼・晩の4基本枠のいずれかに漏れなく100%割り当てる）
 function getMealSectionCategory(item) {
   if (item.cat === "主食" || item.name.includes("麺") || item.name.includes("茶漬け") || item.name.includes("雑炊") || item.name.includes("丼") || item.name.includes("寿司") || item.name.includes("カレー") || item.name.includes("炒飯")) {
     return "主食";
@@ -1029,34 +1165,26 @@ function getMealSectionCategory(item) {
   if (item.cat === "飲料") {
     return "飲料";
   }
-  // 上記以外（おかず、間食由来の果物・和菓子・スイーツ、夜食由来のナッツ等）はすべて副菜・おかず枠へ集約
   return "おかず";
 }
 
-// 食事入力チップの再構築（朝・昼・晩・間食・夜食 全スロット完全連動）
 function rebuildAllInputChips() {
-  // 朝食（主食・汁物・おかず・飲料の4枠へ漏れなくマッピング）
   buildCategoryChips('m_chips_main', 'morning', menuMaster.filter(x => x.m && getMealSectionCategory(x) === "主食"));
   buildCategoryChips('m_chips_soup', 'morning', menuMaster.filter(x => x.m && getMealSectionCategory(x) === "汁物"));
   buildCategoryChips('m_chips_side', 'morning', menuMaster.filter(x => x.m && getMealSectionCategory(x) === "おかず"));
   buildCategoryChips('m_chips_drink', 'morning', menuMaster.filter(x => x.m && getMealSectionCategory(x) === "飲料"));
 
-  // 昼食（主食・汁物・おかず・飲料の4枠へ漏れなくマッピング）
   buildCategoryChips('l_chips_main', 'lunch', menuMaster.filter(x => x.l && getMealSectionCategory(x) === "主食"));
   buildCategoryChips('l_chips_soup', 'lunch', menuMaster.filter(x => x.l && getMealSectionCategory(x) === "汁物"));
   buildCategoryChips('l_chips_side', 'lunch', menuMaster.filter(x => x.l && getMealSectionCategory(x) === "おかず"));
   buildCategoryChips('l_chips_drink', 'lunch', menuMaster.filter(x => x.l && getMealSectionCategory(x) === "飲料"));
 
-  // 夕食（主食・汁物・おかず・飲料の4枠へ漏れなくマッピング）
   buildCategoryChips('d_chips_main', 'dinner', menuMaster.filter(x => x.d && getMealSectionCategory(x) === "主食"));
   buildCategoryChips('d_chips_soup', 'dinner', menuMaster.filter(x => x.d && getMealSectionCategory(x) === "汁物"));
   buildCategoryChips('d_chips_side', 'dinner', menuMaster.filter(x => x.d && getMealSectionCategory(x) === "おかず"));
   buildCategoryChips('d_chips_drink', 'dinner', menuMaster.filter(x => x.d && getMealSectionCategory(x) === "飲料"));
 
-  // 間食・カフェ休憩（設定でチェックされた全品目を確実に反映）
   buildCategoryChips('snack_chips', 'snack', menuMaster.filter(x => x.s));
-
-  // 夜食・深夜飲食（設定でチェックされた全品目を確実に反映）
   buildCategoryChips('latenight_chips', 'latenight', menuMaster.filter(x => x.ln));
 
   rebuildMedChipsUI();
@@ -1543,6 +1671,7 @@ function changeActiveDate(newDate) {
   updateDateBadge(activeDate);
   loadRecordIntoForm(activeDate);
   renderTodayHealthTip(activeDate);
+  checkYesterdayNightStatus();
 }
 
 function setSelectValueSafely(selectId, val) {
@@ -1829,11 +1958,10 @@ function updateLiveSummary() {
   if (steps >= (goal.targetSteps || 8000)) score += 15;
   if (saltTotal > 0 && saltTotal <= 6.5) score += 10;
 
-  // アルコール合計本数による一元採点（夜食の追加も公平に評価）
   if (nut.totalBottles === 0) {
-    score += 10; // 休肝日達成◎
+    score += 10;
   } else if (nut.totalBottles === 1) {
-    score += 5;  // 適正飲酒達成◎
+    score += 5;
   }
 
   score = Math.min(100, Math.round(score));
@@ -1843,6 +1971,13 @@ function updateLiveSummary() {
   if (score >= 85) { rankTitle.textContent = '🥇 ゴールド'; rankTitle.style.color = '#fbbf24'; }
   else if (score >= 60) { rankTitle.textContent = '🥈 シルバー'; rankTitle.style.color = '#38bdf8'; }
   else { rankTitle.textContent = '🥉 ブロンズ'; rankTitle.style.color = '#94a3b8'; }
+
+  // 前日体重比の算出（オストリッチ防止・救済フィードバック用）
+  const yStr = getYesterdayString(activeDate);
+  const yRec = allRecords[yStr] || {};
+  const yWeight = yRec.morning?.weight || yRec.weight || null;
+  const curWeight = parseFloat(document.getElementById('m_weight')?.value) || parseFloat(document.getElementById('daily_weight')?.value) || null;
+  const weightDiff = (curWeight && yWeight) ? (curWeight - yWeight) : 0;
 
   updateSidePanelLive({
     mRecorded: !!allRecords[activeDate]?.morning?.time,
@@ -1856,7 +1991,9 @@ function updateLiveSummary() {
     saltTotal: saltTotal,
     inCal: inCal,
     bottlesTotal: nut.totalBottles,
-    dAlc: nut.dAlc
+    dAlc: nut.dAlc,
+    weightDiff: weightDiff,
+    curWeight: curWeight
   });
 }
 
@@ -1880,7 +2017,10 @@ function updateSidePanelLive(data) {
 
   const docMsgEl = document.getElementById('side_doc_msg');
   if (docMsgEl) {
-    if (data.bpSys && data.bpDia) {
+    if (data.weightDiff >= 0.7) {
+      // 🌟 オストリッチ防止：急増時の救済医学フィードバック（Dr.ケン）
+      docMsgEl.innerHTML = `体重の前日比増(<b>+${data.weightDiff.toFixed(1)}kg</b>)は脂肪ではありません！塩分を抱え込んだ『一時的な水分貯留（むくみ）』です。コップ1杯の常温水を飲んで血流を保ちましょう。`;
+    } else if (data.bpSys && data.bpDia) {
       const pp = data.bpSys - data.bpDia;
       let ppComment = pp < 65 ? `<span style="color:var(--accent-green);">脈圧<b>${pp}</b>(血管のしなやかさ良好◎)</span>` : `<span style="color:var(--accent-amber);">脈圧<b>${pp}</b>(やや開き気味・動脈硬化予防を意識)</span>`;
 
@@ -1902,41 +2042,46 @@ function updateSidePanelLive(data) {
 
   const nutMsgEl = document.getElementById('side_nut_msg');
   if (nutMsgEl) {
-    const allSelected = [...currentSelections.morning, ...currentSelections.lunch, ...currentSelections.dinner, ...currentSelections.snack, ...currentSelections.latenight];
-    const hasNoodle = allSelected.some(x => x.name.includes('ラーメン') || x.name.includes('うどん'));
-    const hasCake = allSelected.some(x => x.name.includes('ケーキ') || x.name.includes('アイス'));
-    const hasSoy = allSelected.some(x => x.name.includes('豆乳') || x.name.includes('納豆') || (x.subtype && x.subtype.includes('豆乳')));
-    const hasFish = allSelected.some(x => x.name.includes('魚') || x.name.includes('刺身') || x.name.includes('寿司'));
-    const hasEgg = allSelected.some(x => x.name.includes('卵'));
-    const hasYakitori = allSelected.some(x => x.name.includes('焼き鳥'));
-    const hasFruit = allSelected.some(x => x.name.includes('果物') || x.name.includes('バナナ'));
-    const hasCheese = allSelected.some(x => x.name.includes('チーズ'));
-    const hasMentaiko = allSelected.some(x => x.name.includes('明太子'));
-
-    if (data.saltTotal > 7.0) {
-      nutMsgEl.innerHTML = `推定塩分が<b>${data.saltTotal.toFixed(1)}g</b>です。「野菜ジュース」や「果物」「豆乳」をプラスしてカリウムで塩分排出を促しましょう！`;
-    } else if (hasMentaiko) {
-      nutMsgEl.innerHTML = `明太子が入っていますね！塩分とプリン体が凝縮されているので、「少なめ」にするか野菜・果物と一緒に召し上がると安心です◎`;
-    } else if (hasCheese) {
-      nutMsgEl.innerHTML = `チーズが入っていますね！カルシウムとタンパク質を手軽に補給できる良質な食材です◎`;
-    } else if (hasYakitori) {
-      nutMsgEl.innerHTML = `焼き鳥が入っていますね！ささみやレバーは高タンパク・高鉄分で最高の選択です◎皮などの脂質には少し気を配りましょう。`;
-    } else if (hasFruit) {
-      nutMsgEl.innerHTML = `果物（バナナ等）が入っていますね！豊富なカリウムが血管内の余分なナトリウム排出を力強く促進します◎`;
-    } else if (hasCake) {
-      nutMsgEl.innerHTML = `スイーツを楽しまれましたね！おやつを味わうのも長続きの秘訣です。夕食を少し軽めに調整すればバッチリです◎`;
-    } else if (hasEgg) {
-      nutMsgEl.innerHTML = `完全栄養食品の卵が入っていますね！アミノ酸スコア100の良質タンパク質が代謝と筋力維持を力強く支えます◎`;
-    } else if (hasFish) {
-      nutMsgEl.innerHTML = `お魚・お寿司が入っていますね！オメガ3脂肪酸（EPA・DHA）が血管を保護して血液サラサラに貢献します◎`;
-    } else if (hasNoodle) {
-      nutMsgEl.innerHTML = `麺類が入っていますね！「つゆを残す」だけで約2〜3gの大幅減塩が完了しています。ナイス選択です！`;
-    } else if (hasSoy) {
-      nutMsgEl.innerHTML = `大豆製品・豆乳が摂れていますね！植物性タンパク質とカリウムが血圧を力強くサポートします。`;
-    } else if (data.waterGlasses < 4) {
-      nutMsgEl.innerHTML = `現在水分は<b>${data.waterGlasses}杯(${(data.waterGlasses*0.25).toFixed(1)}L)</b>。1日4杯(1.0L)を目指して補給しましょう！`;
+    if (data.weightDiff >= 0.7) {
+      // 🌟 オストリッチ防止：急増時の救済栄養フィードバック（アヤ）
+      nutMsgEl.innerHTML = `昨日楽しんだ分は焦らずリカバリー！今日は『バナナ』『納豆』『野菜ジュース』などのカリウム食材を選んで、余分な水分と塩分を洗い流せば3日で戻りますよ◎`;
     } else {
-      nutMsgEl.innerHTML = `現在推定塩分は<b>${data.saltTotal.toFixed(1)}g</b>。目標6.0g未満に向けてとても良いペースです！`;
+      const allSelected = [...currentSelections.morning, ...currentSelections.lunch, ...currentSelections.dinner, ...currentSelections.snack, ...currentSelections.latenight];
+      const hasNoodle = allSelected.some(x => x.name.includes('ラーメン') || x.name.includes('うどん'));
+      const hasCake = allSelected.some(x => x.name.includes('ケーキ') || x.name.includes('アイス'));
+      const hasSoy = allSelected.some(x => x.name.includes('豆乳') || x.name.includes('納豆') || (x.subtype && x.subtype.includes('豆乳')));
+      const hasFish = allSelected.some(x => x.name.includes('魚') || x.name.includes('刺身') || x.name.includes('寿司'));
+      const hasEgg = allSelected.some(x => x.name.includes('卵'));
+      const hasYakitori = allSelected.some(x => x.name.includes('焼き鳥'));
+      const hasFruit = allSelected.some(x => x.name.includes('果物') || x.name.includes('バナナ'));
+      const hasCheese = allSelected.some(x => x.name.includes('チーズ'));
+      const hasMentaiko = allSelected.some(x => x.name.includes('明太子'));
+
+      if (data.saltTotal > 7.0) {
+        nutMsgEl.innerHTML = `推定塩分が<b>${data.saltTotal.toFixed(1)}g</b>です。「野菜ジュース」や「果物」「豆乳」をプラスしてカリウムで塩分排出を促しましょう！`;
+      } else if (hasMentaiko) {
+        nutMsgEl.innerHTML = `明太子が入っていますね！塩分とプリン体が凝縮されているので、「少なめ」にするか野菜・果物と一緒に召し上がると安心です◎`;
+      } else if (hasCheese) {
+        nutMsgEl.innerHTML = `チーズが入っていますね！カルシウムとタンパク質を手軽に補給できる良質な食材です◎`;
+      } else if (hasYakitori) {
+        nutMsgEl.innerHTML = `焼き鳥が入っていますね！ささみやレバーは高タンパク・高鉄分で最高の選択です◎皮などの脂質には少し気を配りましょう。`;
+      } else if (hasFruit) {
+        nutMsgEl.innerHTML = `果物（バナナ等）が入っていますね！豊富なカリウムが血管内の余分なナトリウム排出を力強く促進します◎`;
+      } else if (hasCake) {
+        nutMsgEl.innerHTML = `スイーツを楽しまれましたね！おやつを味わうのも長続きの秘訣です。夕食を少し軽めに調整すればバッチリです◎`;
+      } else if (hasEgg) {
+        nutMsgEl.innerHTML = `完全栄養食品の卵が入っていますね！アミノ酸スコア100の良質タンパク質が代謝と筋力維持を力強く支えます◎`;
+      } else if (hasFish) {
+        nutMsgEl.innerHTML = `お魚・お寿司が入っていますね！オメガ3脂肪酸（EPA・DHA）が血管を保護して血液サラサラに貢献します◎`;
+      } else if (hasNoodle) {
+        nutMsgEl.innerHTML = `麺類が入っていますね！「つゆを残す」だけで約2〜3gの大幅減塩が完了しています。ナイス選択です！`;
+      } else if (hasSoy) {
+        nutMsgEl.innerHTML = `大豆製品・豆乳が摂れていますね！植物性タンパク質とカリウムが血圧を力強くサポートします。`;
+      } else if (data.waterGlasses < 4) {
+        nutMsgEl.innerHTML = `現在水分は<b>${data.waterGlasses}杯(${(data.waterGlasses*0.25).toFixed(1)}L)</b>。1日4杯(1.0L)を目指して補給しましょう！`;
+      } else {
+        nutMsgEl.innerHTML = `現在推定塩分は<b>${data.saltTotal.toFixed(1)}g</b>。目標6.0g未満に向けてとても良いペースです！`;
+      }
     }
   }
 }
@@ -1994,6 +2139,7 @@ function saveSlot(slot) {
   const slotCard = document.getElementById(`slot-${slot}`);
   if (slotCard) slotCard.classList.add('slot-completed');
 
+  checkYesterdayNightStatus();
   triggerCelebration();
 }
 
@@ -2002,6 +2148,12 @@ function triggerCelebration() {
   const item = PRAISE_MESSAGES[Math.floor(Math.random() * PRAISE_MESSAGES.length)];
   document.getElementById('praiseTitle').textContent = item.title;
   document.getElementById('praiseMsg').textContent = item.msg;
+
+  const btnReturn = document.getElementById('btnPraiseReturnToday');
+  if (btnReturn) {
+    btnReturn.style.display = isRecoveringYesterday ? 'block' : 'none';
+  }
+
   document.getElementById('praiseModal').classList.add('show');
 }
 
@@ -2046,12 +2198,17 @@ function initCharts() {
   weightChartInst = new Chart(ctxW, {
     type: 'line',
     data: { labels: [], datasets: [
-      { label: '7日移動平均', data: [], borderColor: '#38bdf8', borderWidth: 3, tension: 0.3, pointRadius: 0 },
-      { label: '実測体重', data: [], borderColor: 'rgba(139, 155, 180, 0.4)', borderDash: [2, 2], borderWidth: 1, pointRadius: 2, pointBackgroundColor: '#8b9bb4' },
+      { label: '7日移動平均 (SMA7)', data: [], borderColor: '#38bdf8', borderWidth: 3, tension: 0.3, pointRadius: 0 },
+      { label: '実測体重', data: [], borderColor: 'rgba(139, 155, 180, 0.5)', borderDash: [2, 2], borderWidth: 1.5, pointRadius: 3, pointBackgroundColor: '#8b9bb4' },
       { label: '目標体重', data: [], borderColor: 'rgba(251, 191, 36, 0.7)', borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, fill: false },
       { label: '適正体重(BMI22)', data: [], borderColor: 'rgba(52, 211, 153, 0.7)', borderDash: [4, 4], borderWidth: 1.5, pointRadius: 0, fill: false }
     ]},
-    options: baseOpt
+    options: Object.assign({}, baseOpt, {
+      scales: {
+        x: { ticks: { color: '#64748b', maxTicksLimit: 8 }, grid: { color: '#1a243a' } },
+        y: { ticks: { color: '#38bdf8' }, grid: { color: '#1a243a' } }
+      }
+    })
   });
 
   const ctxB = document.getElementById('bpTrendChart').getContext('2d');
@@ -2197,13 +2354,40 @@ function refreshDashboard() {
   const maSys = calculateSMA7(bpSysList);
   const maDia = calculateSMA7(bpDiaList);
 
+  // ⚖️ 体重トレンドチャートのオートズーム制御
   if (weightChartInst) {
     weightChartInst.data.labels = labels;
     weightChartInst.data.datasets[0].data = maWeight;
     weightChartInst.data.datasets[1].data = weights;
     weightChartInst.data.datasets[2].data = targetWeightLine;
     weightChartInst.data.datasets[3].data = stdWeightLine;
+
+    const validWeights = weights.filter(v => v !== null && !isNaN(v));
+    const validSMA = maWeight.filter(v => v !== null && !isNaN(v));
+    const allValids = [...validWeights, ...validSMA];
+
+    if (isWeightZoomed && allValids.length > 0) {
+      // 実測ズームモード：実測値およびSMA7の範囲にフォーカス（起伏がはっきり見える）
+      const minW = Math.min(...allValids);
+      const maxW = Math.max(...allValids);
+      weightChartInst.options.scales.y.min = Math.floor(minW - 0.8);
+      weightChartInst.options.scales.y.max = Math.ceil(maxW + 0.8);
+    } else {
+      // 目標全体表示モード：目標体重・適正体重を含めて俯瞰
+      delete weightChartInst.options.scales.y.min;
+      delete weightChartInst.options.scales.y.max;
+    }
+
     weightChartInst.update();
+  }
+
+  // 目標バッジの更新
+  const targetBadgeEl = document.getElementById('weightTargetDisplayBadge');
+  if (targetBadgeEl) {
+    const validWeights = weights.filter(v => v !== null && !isNaN(v));
+    const latestW = validWeights.length > 0 ? validWeights[validWeights.length - 1] : null;
+    const diffText = latestW ? ` (あと ${(latestW - targetW).toFixed(1)}kg)` : '';
+    targetBadgeEl.textContent = `🎯 目標: ${targetW.toFixed(1)}kg${diffText} / 適正: ${stdWeight}kg`;
   }
 
   if (bpChartInst) {
@@ -2485,6 +2669,7 @@ function importFullJSON(event) {
       loadRecordIntoForm(activeDate);
       renderTodayHealthTip(activeDate);
       refreshDashboard();
+      checkYesterdayNightStatus();
 
       alert(`✅ 復元が完了しました！\n\n・日次記録：${recCount} 日分\n・お薬マスタ：${medMaster.length} 件`);
 
@@ -2498,7 +2683,6 @@ function importFullJSON(event) {
   reader.readAsText(file);
 }
 
-// 食事内訳のCSV用文字列フォーマット（抜きの場合は「欠食」と明記）
 function formatItemsForCSV(slotObj) {
   if (!slotObj) return '';
   if (slotObj.mealType === '抜き') return '(欠食・抜き)';
@@ -2630,6 +2814,7 @@ function importDataFromCSV(event) {
       loadRecordIntoForm(activeDate);
       renderTodayHealthTip(activeDate);
       refreshDashboard();
+      checkYesterdayNightStatus();
       alert("CSVデータの復元が完了しました！");
     } catch (err) {
       alert("CSV読み込み中にエラーが発生しました。");
@@ -2670,6 +2855,7 @@ function resetDailyRecordsOnly() {
   loadRecordIntoForm(activeDate);
   renderTodayHealthTip(activeDate);
   refreshDashboard();
+  checkYesterdayNightStatus();
   alert("日次記録をリセットしました（お薬やメニュー設定は保持されています）。");
 }
 
