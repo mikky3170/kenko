@@ -1,6 +1,6 @@
 // =========================================================
 // 健康管理くん - PC ビューワー＆臨床カルテ コントローラー (viewer_logic.js)
-// 既往歴・人間ドック経年ストック、Gemini AIスマートトリアージ、A4レポート
+// 過去6回分完全版健診データマトリクス、障害隔離アーキテクチャ、A4レポート
 // =========================================================
 
 const MASTER_KEY_RECORDS = 'health_kun_data_master_records';
@@ -11,6 +11,9 @@ const MASTER_KEY_PROFILE = 'health_kun_data_master_profile';
 const MASTER_KEY_GEMINI_KEY = 'health_kun_gemini_api_key';
 const MASTER_KEY_HISTORY = 'health_kun_data_master_history';
 const MASTER_KEY_CHECKUPS = 'health_kun_data_master_checkups';
+
+// 健診データスキーマバージョン（古い不完全データの自動パージ・クリーン置換判定用）
+const CHECKUP_SCHEMA_VERSION = "2026_v6_clean";
 
 // 💊 表示名と 正式薬剤名・規格の2層マスタ初期値（フォールバック用）
 const DEFAULT_MEDS = [
@@ -28,103 +31,103 @@ const DEFAULT_MEDS = [
   { id: "med_old_3", name: "胃潰瘍治療剤", formalName: "タケキャブOD錠10mg", status: "inactive", m: false, l: false, d: false, n: false, prevNames: ["胃潰瘍治療剤", "胃薬", "タケキャブ"] }
 ];
 
-// 📋 公立昭和病院 予防健診センター 3カ年精密プリセットデータ
+// 📋 正式健診データ 確定全6回分（2021年春の健康原点〜最新2025年秋まで重複ゼロ・全項目完全網羅）
 const PRESET_CHECKUP_DATA = [
   {
     yearLabel: "今回",
     date: "2025/11/21",
     facility: "公立昭和病院 予防健診センター",
     doctor: "北川 敬丈",
-    height: 176.0,
-    weight: 81.2,
-    waist: 90.0,
-    bmi: 26.2,
-    bpSys: 136,
-    bpDia: 87,
-    tg: 87,
-    hdl: 62,
-    ldl: 165,
-    nonHdl: 193,
-    ast: 26,
-    alt: 30,
-    ggtp: 84,
-    fpg: 103,
-    hba1c: 6.0,
-    urineSugar: "(-)",
-    urineProtein: "(-)",
-    rbc: 473,
-    hb: 15.7,
-    ht: 45.8,
-    cre: 0.84,
-    egfr: 72.0,
+    height: 176.0, weight: 81.2, waist: 90.0, bmi: 26.2, bpSys: 136, bpDia: 87,
+    totalChol: 258, tg: 87, hdl: 62, ldl: 165, nonHdl: 193, ua: 6.3,
+    ast: 26, alt: 30, ggtp: 84, fpg: 103, hba1c: 6.0,
+    urineSugar: "(-)", urineProtein: "(-)",
+    rbc: 473, hb: 15.7, ht: 45.8, wbc: 4200, cre: 0.84, egfr: 72.0,
     ecg: "完全右脚ブロック",
+    echo: "脂肪肝、膵描出不良、腎内石灰化",
     fundus: "異常なし (左右KW:0)",
     metabolicJudge: "予備群該当",
-    doctorComment: "メタボリック症候群に該当しません。しかし予備軍に入ります。かかりつけ医がある場合、かかりつけの医師に相談して下さい。人間ドックのため貧血検査、血清クレアチニン検査、心電図検査、眼底検査を実施しています。"
+    doctorComment: "メタボリック症候群に該当しません。しかし予備軍に入ります。かかりつけ医がある場合、相談して下さい。脂肪肝、膵描出不良、腎内石灰化を認めます。"
   },
   {
     yearLabel: "前回",
     date: "2024/12/11",
     facility: "公立昭和病院 予防健診センター",
-    doctor: "健診担当医",
-    height: 176.3,
-    weight: 80.9,
-    waist: 89.8,
-    bmi: 26.0,
-    bpSys: 137,
-    bpDia: 85,
-    tg: 93,
-    hdl: 68,
-    ldl: 172,
-    nonHdl: 196,
-    ast: 25,
-    alt: 24,
-    ggtp: 82,
-    fpg: 113,
-    hba1c: 6.0,
-    urineSugar: "(-)",
-    urineProtein: "(-)",
-    rbc: 492,
-    hb: 16.2,
-    ht: 47.8,
-    cre: 0.95,
-    egfr: 64.0,
-    ecg: "完全右脚ブロック・左脚前肢ブロック",
+    doctor: "北川 敬丈",
+    height: 176.3, weight: 80.9, waist: 89.8, bmi: 26.0, bpSys: 137, bpDia: 85,
+    totalChol: 264, tg: 93, hdl: 68, ldl: 172, nonHdl: 196, ua: 6.5,
+    ast: 25, alt: 24, ggtp: 82, fpg: 113, hba1c: 6.0,
+    urineSugar: "(-)", urineProtein: "(-)",
+    rbc: 492, hb: 16.2, ht: 47.8, wbc: 4300, cre: 0.95, egfr: 63.7,
+    ecg: "完全右脚ブロック、左脚前肢ブロック",
+    echo: "脂肪肝、膵描出不良、腎内石灰化",
     fundus: "異常なし (左右KW:0)",
     metabolicJudge: "基準該当",
-    doctorComment: "メタボリックシンドローム基準に該当。生活習慣改善（運動・減塩・脂質管理）とかかりつけ医への相談を推奨。"
+    doctorComment: "メタボリックシンドローム基準に該当。生活改善しつつ経過観察。眼底異常なし、腹部超音波にて脂肪肝・膵描出不良・腎内石灰化を認める。"
   },
   {
     yearLabel: "前々回",
     date: "2023/11/10",
     facility: "公立昭和病院 予防健診センター",
-    doctor: "健診担当医",
-    height: 175.7,
-    weight: 79.1,
-    waist: 90.0,
-    bmi: 25.6,
-    bpSys: 138,
-    bpDia: 89,
-    tg: 122,
-    hdl: 61,
-    ldl: 166,
-    nonHdl: 193,
-    ast: 25,
-    alt: 39,
-    ggtp: 109,
-    fpg: 105,
-    hba1c: 6.0,
-    urineSugar: "(-)",
-    urineProtein: "(-)",
-    rbc: 489,
-    hb: 15.9,
-    ht: 46.9,
-    cre: 0.82,
-    egfr: 75.0,
+    doctor: "石塚 裕昭",
+    height: 175.7, weight: 79.1, waist: 90.0, bmi: 25.6, bpSys: 138, bpDia: 89,
+    totalChol: 254, tg: 122, hdl: 61, ldl: 166, nonHdl: 193, ua: 5.5,
+    ast: 25, alt: 39, ggtp: 109, fpg: 105, hba1c: 6.0,
+    urineSugar: "(-)", urineProtein: "(-)",
+    rbc: 489, hb: 15.9, ht: 46.9, wbc: 4300, cre: 0.82, egfr: 75.2,
     ecg: "完全右脚ブロック",
+    echo: "脂肪肝、膵描出不良",
     fundus: "異常なし (左右KW:0)",
     metabolicJudge: "予備群該当",
-    doctorComment: "γ-GTP高値、LDL高値。飲酒量調整および適度な有酸素運動を推奨。"
+    doctorComment: "生活改善しつつ経過観察。γ-GTP高値(109)、LDL高値(166)。飲酒量調整および適度な有酸素運動を推奨。"
+  },
+  {
+    yearLabel: "4回前",
+    date: "2022/11/11",
+    facility: "公立昭和病院 予防健診センター",
+    doctor: "鈴木 裕子",
+    height: 176.3, weight: 81.7, waist: 88.6, bmi: 26.3, bpSys: 132, bpDia: 82,
+    totalChol: 228, tg: 103, hdl: 62, ldl: 140, nonHdl: 166, ua: 6.2,
+    ast: 21, alt: 21, ggtp: 58, fpg: 105, hba1c: 6.0,
+    urineSugar: "(-)", urineProtein: "(±)",
+    rbc: 491, hb: 15.6, ht: 47.1, wbc: 3600, cre: 0.93, egfr: 65.8,
+    ecg: "完全右脚ブロック",
+    echo: "脂肪肝",
+    fundus: "異常なし (左右KW:0)",
+    metabolicJudge: "予備群該当",
+    doctorComment: "生活改善しつつ経過観察。体重81.7kg、腹囲88.6cm。尿蛋白(±)。脂肪肝を認めます。"
+  },
+  {
+    yearLabel: "5回前",
+    date: "2021/12/09",
+    facility: "公立昭和病院 予防健診センター",
+    doctor: "佐藤 徹",
+    height: 175.6, weight: 79.7, waist: 87.5, bmi: 25.8, bpSys: 133, bpDia: 87,
+    totalChol: 232, tg: 124, hdl: 60, ldl: 147, nonHdl: 172, ua: 5.5,
+    ast: 24, alt: 40, ggtp: 119, fpg: 100, hba1c: 5.7,
+    urineSugar: "(-)", urineProtein: "(±)",
+    rbc: 509, hb: 16.0, ht: 47.8, wbc: 5300, cre: 1.09, egfr: 55.6,
+    ecg: "右軸偏位、完全右脚ブロック",
+    echo: "肝臓・膵臓等異常所見なし",
+    fundus: "視神経乳頭陥凹拡大",
+    metabolicJudge: "予備群該当",
+    doctorComment: "要精密検査D2(眼底で視神経乳頭陥凹拡大)。γ-GTP高値(119)、eGFR軽度低下(55.6)。脂質異常あり。"
+  },
+  {
+    yearLabel: "原点(健康時)",
+    date: "2021/02/17",
+    facility: "公立昭和病院 予防健診センター",
+    doctor: "佐藤 徹",
+    height: 175.6, weight: 76.8, waist: 86.0, bmi: 24.9, bpSys: 119, bpDia: 79,
+    totalChol: 235, tg: 94, hdl: 58, ldl: 154, nonHdl: 177, ua: 5.9,
+    ast: 19, alt: 25, ggtp: 83, fpg: 99, hba1c: 5.7,
+    urineSugar: "(-)", urineProtein: "(±)",
+    rbc: 497, hb: 15.5, ht: 46.9, wbc: 4400, cre: 1.05, egfr: 58.2,
+    ecg: "左軸偏位、完全右脚ブロック",
+    echo: "脂肪肝 (軽度)",
+    fundus: "視神経乳頭陥凹拡大",
+    metabolicJudge: "非該当",
+    doctorComment: "メタボリック非該当。血圧119/79で正常域。HbA1c 5.7%で正常。体重76.8kg(BMI24.9)。"
   }
 ];
 
@@ -138,7 +141,7 @@ let globalCheckupHistory = [];
 
 let chartInstances = {};
 
-// 💊 お薬データの完全自動救済ロジック（0件消失完全防止）
+// 💊 お薬データの完全自動救済ロジック
 function normalizeMedsArray(medsArray) {
   if (!Array.isArray(medsArray) || medsArray.length === 0) {
     return JSON.parse(JSON.stringify(DEFAULT_MEDS));
@@ -170,7 +173,6 @@ window.addEventListener('DOMContentLoaded', () => {
   renderMasterMedsTable();
   renderDictTable();
   refreshAnalysis();
-  refreshCheckupAnalytics();
   generateDoctorReport();
 });
 
@@ -238,10 +240,11 @@ function loadClinicalHistory() {
   setVal('lab_waist', globalClinicalHistory.waist);
   setVal('lab_metabolicJudge', globalClinicalHistory.metabolicJudge);
   setVal('lab_ecg', globalClinicalHistory.ecg);
-  setVal('lab_fundus', globalClinicalHistory.fundus);
+  setVal('lab_echo', globalClinicalHistory.echo);
   setVal('lab_ldl', globalClinicalHistory.ldl);
   setVal('lab_hdl', globalClinicalHistory.hdl);
   setVal('lab_tg', globalClinicalHistory.tg);
+  setVal('lab_ua', globalClinicalHistory.ua);
   setVal('lab_fpg', globalClinicalHistory.fpg);
   setVal('lab_hba1c', globalClinicalHistory.hba1c);
   setVal('lab_egfr', globalClinicalHistory.egfr);
@@ -251,7 +254,7 @@ function loadClinicalHistory() {
   setVal('lab_ast', globalClinicalHistory.ast);
   setVal('lab_alt', globalClinicalHistory.alt);
   setVal('lab_ggtp', globalClinicalHistory.ggtp);
-  setVal('lab_urine', globalClinicalHistory.urine);
+  setVal('lab_totalChol', globalClinicalHistory.totalChol);
   setVal('lab_doctorComment', globalClinicalHistory.doctorComment);
 }
 
@@ -268,10 +271,11 @@ function autoSaveClinicalHistory() {
     waist: getVal('lab_waist') ? parseFloat(getVal('lab_waist')) : null,
     metabolicJudge: getVal('lab_metabolicJudge'),
     ecg: getVal('lab_ecg'),
-    fundus: getVal('lab_fundus'),
+    echo: getVal('lab_echo'),
     ldl: getVal('lab_ldl') ? parseFloat(getVal('lab_ldl')) : null,
     hdl: getVal('lab_hdl') ? parseFloat(getVal('lab_hdl')) : null,
     tg: getVal('lab_tg') ? parseFloat(getVal('lab_tg')) : null,
+    ua: getVal('lab_ua') ? parseFloat(getVal('lab_ua')) : null,
     fpg: getVal('lab_fpg') ? parseFloat(getVal('lab_fpg')) : null,
     hba1c: getVal('lab_hba1c') ? parseFloat(getVal('lab_hba1c')) : null,
     egfr: getVal('lab_egfr') ? parseFloat(getVal('lab_egfr')) : null,
@@ -281,7 +285,7 @@ function autoSaveClinicalHistory() {
     ast: getVal('lab_ast') ? parseInt(getVal('lab_ast'), 10) : null,
     alt: getVal('lab_alt') ? parseInt(getVal('lab_alt'), 10) : null,
     ggtp: getVal('lab_ggtp') ? parseInt(getVal('lab_ggtp'), 10) : null,
-    urine: getVal('lab_urine'),
+    totalChol: getVal('lab_totalChol') ? parseInt(getVal('lab_totalChol'), 10) : null,
     doctorComment: getVal('lab_doctorComment')
   };
 
@@ -291,7 +295,7 @@ function autoSaveClinicalHistory() {
     localStorage.setItem(MASTER_KEY_PROFILE, JSON.stringify(globalProfile));
   }
 
-  // 最新年度の健診履歴配列にも自動連動
+  // 最新回の健診履歴配列にも自動連動
   if (globalCheckupHistory && globalCheckupHistory.length > 0) {
     const latest = globalCheckupHistory[0];
     if (globalClinicalHistory.checkDate) latest.date = globalClinicalHistory.checkDate;
@@ -299,6 +303,7 @@ function autoSaveClinicalHistory() {
     if (globalClinicalHistory.ldl) latest.ldl = globalClinicalHistory.ldl;
     if (globalClinicalHistory.hdl) latest.hdl = globalClinicalHistory.hdl;
     if (globalClinicalHistory.tg) latest.tg = globalClinicalHistory.tg;
+    if (globalClinicalHistory.ua) latest.ua = globalClinicalHistory.ua;
     if (globalClinicalHistory.fpg) latest.fpg = globalClinicalHistory.fpg;
     if (globalClinicalHistory.hba1c) latest.hba1c = globalClinicalHistory.hba1c;
     if (globalClinicalHistory.egfr) latest.egfr = globalClinicalHistory.egfr;
@@ -308,8 +313,9 @@ function autoSaveClinicalHistory() {
     if (globalClinicalHistory.ast) latest.ast = globalClinicalHistory.ast;
     if (globalClinicalHistory.alt) latest.alt = globalClinicalHistory.alt;
     if (globalClinicalHistory.ggtp) latest.ggtp = globalClinicalHistory.ggtp;
+    if (globalClinicalHistory.totalChol) latest.totalChol = globalClinicalHistory.totalChol;
     if (globalClinicalHistory.ecg) latest.ecg = globalClinicalHistory.ecg;
-    if (globalClinicalHistory.fundus) latest.fundus = globalClinicalHistory.fundus;
+    if (globalClinicalHistory.echo) latest.echo = globalClinicalHistory.echo;
     if (globalClinicalHistory.metabolicJudge) latest.metabolicJudge = globalClinicalHistory.metabolicJudge;
     if (globalClinicalHistory.doctorComment) latest.doctorComment = globalClinicalHistory.doctorComment;
     localStorage.setItem(MASTER_KEY_CHECKUPS, JSON.stringify(globalCheckupHistory));
@@ -334,9 +340,11 @@ function getClinicalHistorySummaryText() {
   if (h.waist) labs.push(`腹囲: ${h.waist}cm`);
   if (h.metabolicJudge) labs.push(`メタボ判定: ${h.metabolicJudge}`);
   if (h.ecg) labs.push(`心電図: ${h.ecg}`);
+  if (h.echo) labs.push(`腹部エコー: ${h.echo}`);
   if (h.ldl !== null && h.ldl !== undefined && h.ldl !== '') labs.push(`LDL: ${h.ldl}mg/dL`);
   if (h.hdl !== null && h.hdl !== undefined && h.hdl !== '') labs.push(`HDL: ${h.hdl}mg/dL`);
   if (h.tg !== null && h.tg !== undefined && h.tg !== '') labs.push(`TG: ${h.tg}mg/dL`);
+  if (h.ua !== null && h.ua !== undefined && h.ua !== '') labs.push(`尿酸値: ${h.ua}mg/dL`);
   if (h.fpg !== null && h.fpg !== undefined && h.fpg !== '') labs.push(`空腹時血糖: ${h.fpg}mg/dL`);
   if (h.hba1c !== null && h.hba1c !== undefined && h.hba1c !== '') labs.push(`HbA1c: ${h.hba1c}%`);
   if (h.egfr !== null && h.egfr !== undefined && h.egfr !== '') labs.push(`eGFR: ${h.egfr}`);
@@ -349,19 +357,35 @@ function getClinicalHistorySummaryText() {
 }
 
 // =========================================================
-// 🧪 人間ドック・健診経年データ 管理 ＆ 単独JSON入出力
+// 🧪 人間ドック・健診経年データ 管理（古い残骸データの完全パージ＆確定6回クリーン置換）
 // =========================================================
 function loadCheckupHistory() {
   const raw = localStorage.getItem(MASTER_KEY_CHECKUPS);
+  let needsCleanUpgrade = false;
+
   if (raw) {
-    try { globalCheckupHistory = JSON.parse(raw); } catch (e) { globalCheckupHistory = []; }
+    try {
+      const parsed = JSON.parse(raw);
+      // データが配列でない、要素数が6未満、または尿酸値(ua)等の新プロパティを持たない古い不完全データの場合
+      if (!Array.isArray(parsed) || parsed.length < 6 || !parsed[0] || parsed[0].ua === undefined) {
+        needsCleanUpgrade = true;
+      } else {
+        globalCheckupHistory = parsed;
+      }
+    } catch (e) {
+      needsCleanUpgrade = true;
+    }
   } else {
-    // 初回起動時は公立昭和病院の3年分プリセットを初期化
+    needsCleanUpgrade = true;
+  }
+
+  // 古い中途半端なデータや残骸を完全にパージし、洗練された確定全6回完全版で上書き置換
+  if (needsCleanUpgrade) {
     globalCheckupHistory = JSON.parse(JSON.stringify(PRESET_CHECKUP_DATA));
     localStorage.setItem(MASTER_KEY_CHECKUPS, JSON.stringify(globalCheckupHistory));
   }
 
-  // 最新年度の検査値を単体入力フォームおよび globalClinicalHistory に同期
+  // 最新回の検査値を単体カルテフォームに同期
   if (globalCheckupHistory && globalCheckupHistory.length > 0) {
     const latest = globalCheckupHistory[0];
     if (!globalClinicalHistory.checkDate) globalClinicalHistory.checkDate = latest.date;
@@ -369,6 +393,7 @@ function loadCheckupHistory() {
     if (!globalClinicalHistory.ldl) globalClinicalHistory.ldl = latest.ldl;
     if (!globalClinicalHistory.hdl) globalClinicalHistory.hdl = latest.hdl;
     if (!globalClinicalHistory.tg) globalClinicalHistory.tg = latest.tg;
+    if (!globalClinicalHistory.ua) globalClinicalHistory.ua = latest.ua;
     if (!globalClinicalHistory.fpg) globalClinicalHistory.fpg = latest.fpg;
     if (!globalClinicalHistory.hba1c) globalClinicalHistory.hba1c = latest.hba1c;
     if (!globalClinicalHistory.egfr) globalClinicalHistory.egfr = latest.egfr;
@@ -378,8 +403,9 @@ function loadCheckupHistory() {
     if (!globalClinicalHistory.ast) globalClinicalHistory.ast = latest.ast;
     if (!globalClinicalHistory.alt) globalClinicalHistory.alt = latest.alt;
     if (!globalClinicalHistory.ggtp) globalClinicalHistory.ggtp = latest.ggtp;
+    if (!globalClinicalHistory.totalChol) globalClinicalHistory.totalChol = latest.totalChol;
     if (!globalClinicalHistory.ecg) globalClinicalHistory.ecg = latest.ecg;
-    if (!globalClinicalHistory.fundus) globalClinicalHistory.fundus = latest.fundus;
+    if (!globalClinicalHistory.echo) globalClinicalHistory.echo = latest.echo;
     if (!globalClinicalHistory.metabolicJudge) globalClinicalHistory.metabolicJudge = latest.metabolicJudge;
     if (!globalClinicalHistory.doctorComment) globalClinicalHistory.doctorComment = latest.doctorComment;
     loadClinicalHistory();
@@ -391,13 +417,13 @@ function loadCheckupHistory() {
   }
 }
 
-// 🧪 人間ドックデータ単独 JSONエクスポート
 function exportCheckupSoloJSON() {
   autoSaveClinicalHistory();
   const todayStr = new Date().toISOString().slice(0, 10);
   const checkupBackup = {
     dataType: "health_kun_checkup_history",
-    version: "1.0",
+    version: "3.0",
+    schemaVersion: CHECKUP_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
     facility: "公立昭和病院 予防健診センター",
     records: globalCheckupHistory
@@ -407,12 +433,11 @@ function exportCheckupSoloJSON() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `健康管理くん_人間ドック健診データ_${todayStr}.json`;
+  a.download = `健康管理くん_健診データ6カ年_${todayStr}.json`;
   a.click();
   URL.revokeObjectURL(url);
 }
 
-// 📂 人間ドックデータ単独 JSONインポート
 function importCheckupSoloJSON(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -431,14 +456,13 @@ function importCheckupSoloJSON(event) {
       }
 
       const count = list.length;
-      if (!confirm(`【健診JSON復元の確認】\n\n選択された健診データ（${count} カ年分）を読み込み、経年アナリティクスおよび臨床マスタを更新しますか？`)) {
+      if (!confirm(`【健診JSON復元の確認】\n\n選択された健診データ（${count} 回分）を読み込み、経年アナリティクスおよび臨床マスタを更新しますか？`)) {
         return;
       }
 
       globalCheckupHistory = list;
       localStorage.setItem(MASTER_KEY_CHECKUPS, JSON.stringify(globalCheckupHistory));
 
-      // 最新回を単体カルテへ反映
       if (globalCheckupHistory.length > 0) {
         const top = globalCheckupHistory[0];
         globalClinicalHistory.checkDate = top.date;
@@ -446,6 +470,7 @@ function importCheckupSoloJSON(event) {
         globalClinicalHistory.ldl = top.ldl;
         globalClinicalHistory.hdl = top.hdl;
         globalClinicalHistory.tg = top.tg;
+        globalClinicalHistory.ua = top.ua;
         globalClinicalHistory.fpg = top.fpg;
         globalClinicalHistory.hba1c = top.hba1c;
         globalClinicalHistory.egfr = top.egfr;
@@ -455,8 +480,9 @@ function importCheckupSoloJSON(event) {
         globalClinicalHistory.ast = top.ast;
         globalClinicalHistory.alt = top.alt;
         globalClinicalHistory.ggtp = top.ggtp;
+        globalClinicalHistory.totalChol = top.totalChol;
         globalClinicalHistory.ecg = top.ecg;
-        globalClinicalHistory.fundus = top.fundus;
+        globalClinicalHistory.echo = top.echo;
         globalClinicalHistory.metabolicJudge = top.metabolicJudge;
         globalClinicalHistory.doctorComment = top.doctorComment;
         localStorage.setItem(MASTER_KEY_HISTORY, JSON.stringify(globalClinicalHistory));
@@ -466,7 +492,7 @@ function importCheckupSoloJSON(event) {
       loadCheckupHistory();
       refreshCheckupAnalytics();
       generateDoctorReport();
-      alert(`✅ ${count} カ年分の人間ドック健診データを正常に読み込み・保管しました！`);
+      alert(`✅ ${count} 回分の健診データを正常に読み込み・保管しました！`);
     } catch (err) {
       alert(`健診JSONの読み込みに失敗しました。\nエラー: ${err.message}`);
     } finally {
@@ -476,9 +502,8 @@ function importCheckupSoloJSON(event) {
   reader.readAsText(file);
 }
 
-// 📋 今回提示された健診結果（3年分）のワンクリック復元
 function loadPresetCheckupData() {
-  if (!confirm("公立昭和病院の健診結果（今回 2025/11、前回 2024/12、前々回 2023/11 の3カ年データ）を自動投入しますか？\n※現在の健診ストックが最新3年分に更新されます。")) return;
+  if (!confirm("確定健診データ（2021年春の健康原点〜最新2025年秋までの全6回分）でクリーン更新しますか？\n※古い残骸データは一掃され、過去6回分のフルデータに統一されます。")) return;
 
   globalCheckupHistory = JSON.parse(JSON.stringify(PRESET_CHECKUP_DATA));
   localStorage.setItem(MASTER_KEY_CHECKUPS, JSON.stringify(globalCheckupHistory));
@@ -489,6 +514,7 @@ function loadPresetCheckupData() {
   globalClinicalHistory.ldl = top.ldl;
   globalClinicalHistory.hdl = top.hdl;
   globalClinicalHistory.tg = top.tg;
+  globalClinicalHistory.ua = top.ua;
   globalClinicalHistory.fpg = top.fpg;
   globalClinicalHistory.hba1c = top.hba1c;
   globalClinicalHistory.egfr = top.egfr;
@@ -498,8 +524,9 @@ function loadPresetCheckupData() {
   globalClinicalHistory.ast = top.ast;
   globalClinicalHistory.alt = top.alt;
   globalClinicalHistory.ggtp = top.ggtp;
+  globalClinicalHistory.totalChol = top.totalChol;
   globalClinicalHistory.ecg = top.ecg;
-  globalClinicalHistory.fundus = top.fundus;
+  globalClinicalHistory.echo = top.echo;
   globalClinicalHistory.metabolicJudge = top.metabolicJudge;
   globalClinicalHistory.doctorComment = top.doctorComment;
   localStorage.setItem(MASTER_KEY_HISTORY, JSON.stringify(globalClinicalHistory));
@@ -508,18 +535,18 @@ function loadPresetCheckupData() {
   loadCheckupHistory();
   refreshCheckupAnalytics();
   generateDoctorReport();
-  alert("✅ 公立昭和病院 3カ年の健診結果を正常に反映しました！");
+  alert("✅ 過去6回分の正式健診データを正常に反映しました！");
 }
 
 // =========================================================
-// 🧪 健診経年アナリティクス 描画ロジック（4大グラフ・マトリクス・総合講評）
+// 🧪 健診経年アナリティクス 描画ロジック（障害隔離アーキテクチャ・公式標準Chart.js準拠）
 // =========================================================
 function refreshCheckupAnalytics() {
   if (!globalCheckupHistory || globalCheckupHistory.length === 0) return;
 
-  // グラフ用時系列配列（古い順：前々回 ➔ 前回 ➔ 今回）
+  // グラフ用時系列配列（古い順：2021春 ➔ 2021冬 ➔ ... ➔ 2025今回）
   const chronoList = [...globalCheckupHistory].reverse();
-  const labels = chronoList.map(item => `${item.yearLabel} (${item.date ? item.date.slice(0,7) : ''})`);
+  const labels = chronoList.map(item => `${item.yearLabel}\n(${item.date ? item.date.slice(2,7) : ''})`);
 
   const ldlArr = chronoList.map(x => x.ldl);
   const hdlArr = chronoList.map(x => x.hdl);
@@ -535,37 +562,41 @@ function refreshCheckupAnalytics() {
   const ggtpArr = chronoList.map(x => x.ggtp);
   const astArr = chronoList.map(x => x.ast);
   const altArr = chronoList.map(x => x.alt);
+  const uaArr = chronoList.map(x => x.ua !== undefined ? x.ua : null);
 
   const egfrArr = chronoList.map(x => x.egfr);
   const creArr = chronoList.map(x => x.cre);
   const hbArr = chronoList.map(x => x.hb);
 
-  renderCheckupLipidChart(labels, ldlArr, hdlArr, tgArr, sysBpArr, lhRatioArr);
-  renderCheckupGlucoseBodyChart(labels, hba1cArr, fpgArr, waistArr, weightArr);
-  renderCheckupLiverChart(labels, ggtpArr, astArr, altArr);
-  renderCheckupKidneyChart(labels, egfrArr, creArr, hbArr);
+  // 【障害隔離】各グラフと表の描画を個別に保護（道連れ停止の完全根絶）
+  try { renderCheckupLipidChart(labels, ldlArr, hdlArr, tgArr, sysBpArr, lhRatioArr); } catch (e) { console.warn("Lipid chart error:", e); }
+  try { renderCheckupGlucoseBodyChart(labels, hba1cArr, fpgArr, waistArr, weightArr); } catch (e) { console.warn("Glucose chart error:", e); }
+  try { renderCheckupLiverChart(labels, ggtpArr, astArr, altArr, uaArr); } catch (e) { console.warn("Liver chart error:", e); }
+  try { renderCheckupKidneyChart(labels, egfrArr, creArr, hbArr); } catch (e) { console.warn("Kidney chart error:", e); }
 
-  renderCheckupMatrixTable();
-  renderCheckupFindingsTable();
-  runRuleBasedCheckupReview();
+  try { renderCheckupMatrixTable(); } catch (e) { console.warn("Matrix table error:", e); }
+  try { renderCheckupFindingsTable(); } catch (e) { console.warn("Findings table error:", e); }
+  try { runRuleBasedCheckupReview(); } catch (e) { console.warn("Review error:", e); }
 }
 
 function renderCheckupLipidChart(labels, ldl, hdl, tg, sysBp, lhRatio) {
   const canvas = document.getElementById('checkupLipidChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  if (chartInstances.checkupLipid) chartInstances.checkupLipid.destroy();
+  if (chartInstances.checkupLipid) {
+    try { chartInstances.checkupLipid.destroy(); } catch (e) {}
+  }
 
   chartInstances.checkupLipid = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
       datasets: [
-        { label: 'LDLコレステロール (mg/dL)', data: ldl, borderColor: '#fb7185', backgroundColor: '#fb7185', borderWidth: 2.5, tension: 0.2, pointRadius: 5, yAxisID: 'yLipid' },
-        { label: 'HDLコレステロール (mg/dL)', data: hdl, borderColor: '#38bdf8', backgroundColor: '#38bdf8', borderWidth: 2, tension: 0.2, pointRadius: 4, yAxisID: 'yLipid' },
-        { label: '中性脂肪 TG (mg/dL)', data: tg, borderColor: '#34d399', backgroundColor: '#34d399', borderWidth: 1.5, borderDash: [3, 3], pointRadius: 4, yAxisID: 'yLipid' },
-        { label: '収縮期血圧 (mmHg)', data: sysBp, borderColor: '#fbbf24', backgroundColor: '#fbbf24', borderWidth: 2, pointRadius: 4, yAxisID: 'yLipid' },
-        { label: 'LH比 (動脈硬化リスク)', data: lhRatio, borderColor: '#c084fc', backgroundColor: '#c084fc', borderWidth: 2, tension: 0.2, pointRadius: 5, borderDash: [4, 4], yAxisID: 'yRatio' }
+        { label: 'LDLコレステロール (mg/dL)', data: ldl, borderColor: '#fb7185', backgroundColor: '#fb7185', borderWidth: 2.5, tension: 0.2, pointRadius: 5, yAxisID: 'y' },
+        { label: 'HDLコレステロール (mg/dL)', data: hdl, borderColor: '#38bdf8', backgroundColor: '#38bdf8', borderWidth: 2, tension: 0.2, pointRadius: 4, yAxisID: 'y' },
+        { label: '中性脂肪 TG (mg/dL)', data: tg, borderColor: '#34d399', backgroundColor: '#34d399', borderWidth: 1.5, borderDash: [3, 3], pointRadius: 4, yAxisID: 'y' },
+        { label: '収縮期血圧 (mmHg)', data: sysBp, borderColor: '#fbbf24', backgroundColor: '#fbbf24', borderWidth: 2, pointRadius: 4, yAxisID: 'y' },
+        { label: 'LH比 (動脈硬化リスク)', data: lhRatio, borderColor: '#c084fc', backgroundColor: '#c084fc', borderWidth: 2, tension: 0.2, pointRadius: 5, borderDash: [4, 4], yAxisID: 'y1' }
       ]
     },
     options: {
@@ -573,8 +604,8 @@ function renderCheckupLipidChart(labels, ldl, hdl, tg, sysBp, lhRatio) {
       plugins: { legend: { labels: { color: '#8b9bb4', font: { size: 9 } } } },
       scales: {
         x: { ticks: { color: '#64748b' }, grid: { color: '#1a243a' } },
-        yLipid: { type: 'linear', position: 'left', min: 40, max: 210, ticks: { color: '#fb7185' }, grid: { color: '#1a243a' } },
-        yRatio: { type: 'linear', position: 'right', min: 1.0, max: 4.0, ticks: { color: '#c084fc' }, grid: { drawOnChartArea: false } }
+        y: { type: 'linear', position: 'left', min: 40, max: 200, ticks: { color: '#fb7185' }, grid: { color: '#1a243a' } },
+        y1: { type: 'linear', position: 'right', min: 1.0, max: 4.0, ticks: { color: '#c084fc' }, grid: { drawOnChartArea: false } }
       }
     }
   });
@@ -584,17 +615,19 @@ function renderCheckupGlucoseBodyChart(labels, hba1c, fpg, waist, weight) {
   const canvas = document.getElementById('checkupGlucoseBodyChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  if (chartInstances.checkupGlucose) chartInstances.checkupGlucose.destroy();
+  if (chartInstances.checkupGlucose) {
+    try { chartInstances.checkupGlucose.destroy(); } catch (e) {}
+  }
 
   chartInstances.checkupGlucose = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
       datasets: [
-        { label: 'HbA1c (%)', data: hba1c, borderColor: '#fde047', backgroundColor: '#fde047', borderWidth: 3, tension: 0.1, pointRadius: 5, yAxisID: 'yA1c' },
-        { label: '空腹時血糖 (mg/dL)', data: fpg, borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 2, tension: 0.2, pointRadius: 4, yAxisID: 'yFpg' },
-        { label: '腹囲 (cm)', data: waist, borderColor: '#38bdf8', backgroundColor: '#38bdf8', borderWidth: 2, borderDash: [2, 2], pointRadius: 4, yAxisID: 'yBody' },
-        { label: '体重 (kg)', data: weight, borderColor: '#22d3ee', backgroundColor: '#22d3ee', borderWidth: 2, pointRadius: 4, yAxisID: 'yBody' }
+        { label: 'HbA1c (%)', data: hba1c, borderColor: '#fde047', backgroundColor: '#fde047', borderWidth: 3, tension: 0.1, pointRadius: 5, yAxisID: 'y' },
+        { label: '空腹時血糖 (mg/dL)', data: fpg, borderColor: '#f97316', backgroundColor: '#f97316', borderWidth: 2, tension: 0.2, pointRadius: 4, yAxisID: 'y1' },
+        { label: '腹囲 (cm)', data: waist, borderColor: '#38bdf8', backgroundColor: '#38bdf8', borderWidth: 2, borderDash: [2, 2], pointRadius: 4, yAxisID: 'y1' },
+        { label: '体重 (kg)', data: weight, borderColor: '#22d3ee', backgroundColor: '#22d3ee', borderWidth: 2, pointRadius: 4, yAxisID: 'y1' }
       ]
     },
     options: {
@@ -602,28 +635,31 @@ function renderCheckupGlucoseBodyChart(labels, hba1c, fpg, waist, weight) {
       plugins: { legend: { labels: { color: '#8b9bb4', font: { size: 9 } } } },
       scales: {
         x: { ticks: { color: '#64748b' }, grid: { color: '#1a243a' } },
-        yA1c: { type: 'linear', position: 'left', min: 5.0, max: 7.0, ticks: { color: '#fde047' }, grid: { color: '#1a243a' } },
-        yFpg: { type: 'linear', position: 'right', min: 80, max: 140, ticks: { color: '#f97316' }, grid: { drawOnChartArea: false } },
-        yBody: { type: 'linear', position: 'right', min: 70, max: 100, ticks: { color: '#38bdf8' }, grid: { drawOnChartArea: false } }
+        y: { type: 'linear', position: 'left', min: 5.0, max: 6.8, ticks: { color: '#fde047' }, grid: { color: '#1a243a' } },
+        y1: { type: 'linear', position: 'right', min: 70, max: 130, ticks: { color: '#38bdf8' }, grid: { drawOnChartArea: false } }
       }
     }
   });
 }
 
-function renderCheckupLiverChart(labels, ggtp, ast, alt) {
+// 肝機能・尿酸値混合チャート（公式標準 y/y1 準拠・クラッシュ完全防止）
+function renderCheckupLiverChart(labels, ggtp, ast, alt, ua) {
   const canvas = document.getElementById('checkupLiverChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  if (chartInstances.checkupLiver) chartInstances.checkupLiver.destroy();
+  if (chartInstances.checkupLiver) {
+    try { chartInstances.checkupLiver.destroy(); } catch (e) {}
+  }
 
   chartInstances.checkupLiver = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: labels,
       datasets: [
-        { label: 'γ-GTP (U/L)', data: ggtp, backgroundColor: 'rgba(192, 132, 252, 0.7)', borderColor: '#c084fc', borderWidth: 1.5 },
-        { label: 'AST/GOT (U/L)', data: ast, backgroundColor: 'rgba(56, 189, 248, 0.7)', borderColor: '#38bdf8', borderWidth: 1.5 },
-        { label: 'ALT/GPT (U/L)', data: alt, backgroundColor: 'rgba(52, 211, 153, 0.7)', borderColor: '#34d399', borderWidth: 1.5 }
+        { label: 'γ-GTP (U/L)', data: ggtp, backgroundColor: 'rgba(192, 132, 252, 0.7)', borderColor: '#c084fc', borderWidth: 1.5, yAxisID: 'y' },
+        { label: 'AST/GOT (U/L)', data: ast, backgroundColor: 'rgba(56, 189, 248, 0.7)', borderColor: '#38bdf8', borderWidth: 1.5, yAxisID: 'y' },
+        { label: 'ALT/GPT (U/L)', data: alt, backgroundColor: 'rgba(52, 211, 153, 0.7)', borderColor: '#34d399', borderWidth: 1.5, yAxisID: 'y' },
+        { label: '血清尿酸値 UA (mg/dL)', type: 'line', data: ua, borderColor: '#fde047', backgroundColor: '#fde047', borderWidth: 2, borderDash: [3, 3], pointRadius: 4, yAxisID: 'y1' }
       ]
     },
     options: {
@@ -631,7 +667,8 @@ function renderCheckupLiverChart(labels, ggtp, ast, alt) {
       plugins: { legend: { labels: { color: '#8b9bb4', font: { size: 9 } } } },
       scales: {
         x: { ticks: { color: '#64748b' }, grid: { display: false } },
-        y: { min: 0, max: 130, ticks: { color: '#64748b' }, grid: { color: '#1a243a' } }
+        y: { type: 'linear', position: 'left', min: 0, max: 140, ticks: { color: '#64748b' }, grid: { color: '#1a243a' } },
+        y1: { type: 'linear', position: 'right', min: 3.0, max: 9.0, ticks: { color: '#fde047' }, grid: { drawOnChartArea: false } }
       }
     }
   });
@@ -641,16 +678,18 @@ function renderCheckupKidneyChart(labels, egfr, cre, hb) {
   const canvas = document.getElementById('checkupKidneyChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  if (chartInstances.checkupKidney) chartInstances.checkupKidney.destroy();
+  if (chartInstances.checkupKidney) {
+    try { chartInstances.checkupKidney.destroy(); } catch (e) {}
+  }
 
   chartInstances.checkupKidney = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
       datasets: [
-        { label: 'eGFR (推算糸球体濾過量)', data: egfr, borderColor: '#34d399', backgroundColor: '#34d399', borderWidth: 2.5, tension: 0.2, pointRadius: 5, yAxisID: 'yEgfr' },
-        { label: '血清クレアチニン (mg/dL)', data: cre, borderColor: '#fb7185', backgroundColor: '#fb7185', borderWidth: 2, pointRadius: 4, yAxisID: 'yCre' },
-        { label: '血色素 Hb (g/dL)', data: hb, borderColor: '#f43f5e', backgroundColor: '#f43f5e', borderWidth: 1.5, borderDash: [2, 2], pointRadius: 4, yAxisID: 'yHb' }
+        { label: 'eGFR (55➔72へ改善維持)', data: egfr, borderColor: '#34d399', backgroundColor: '#34d399', borderWidth: 3, tension: 0.2, pointRadius: 5, yAxisID: 'y' },
+        { label: '血清クレアチニン (mg/dL)', data: cre, borderColor: '#fb7185', backgroundColor: '#fb7185', borderWidth: 2, pointRadius: 4, yAxisID: 'y1' },
+        { label: '血色素 Hb (g/dL)', data: hb, borderColor: '#f43f5e', backgroundColor: '#f43f5e', borderWidth: 1.5, borderDash: [2, 2], pointRadius: 4, yAxisID: 'y1' }
       ]
     },
     options: {
@@ -658,52 +697,53 @@ function renderCheckupKidneyChart(labels, egfr, cre, hb) {
       plugins: { legend: { labels: { color: '#8b9bb4', font: { size: 9 } } } },
       scales: {
         x: { ticks: { color: '#64748b' }, grid: { color: '#1a243a' } },
-        yEgfr: { type: 'linear', position: 'left', min: 40, max: 90, ticks: { color: '#34d399' }, grid: { color: '#1a243a' } },
-        yCre: { type: 'linear', position: 'right', min: 0.5, max: 1.3, ticks: { color: '#fb7185' }, grid: { drawOnChartArea: false } },
-        yHb: { type: 'linear', position: 'right', min: 12.0, max: 18.0, ticks: { color: '#f43f5e' }, grid: { drawOnChartArea: false } }
+        y: { type: 'linear', position: 'left', min: 45, max: 85, ticks: { color: '#34d399' }, grid: { color: '#1a243a' } },
+        y1: { type: 'linear', position: 'right', min: 0.6, max: 18.0, ticks: { color: '#fb7185' }, grid: { drawOnChartArea: false } }
       }
     }
   });
 }
 
-// 📋 経年マトリクステーブルの動的レンダリング
+// 📋 経年マトリクステーブルの動的レンダリング（全6回分完全展開）
 function renderCheckupMatrixTable() {
   const tbody = document.getElementById('checkupMatrixTableBody');
   if (!tbody) return;
   tbody.innerHTML = '';
 
   const r = globalCheckupHistory || [];
-  const c0 = r[0] || {}; // 今回
-  const c1 = r[1] || {}; // 前回
-  const c2 = r[2] || {}; // 前々回
-  const c3 = r[3] || {}; // 4年前
+  const c0 = r[0] || {}; // 今回 2025/11
+  const c1 = r[1] || {}; // 前回 R6/12
+  const c2 = r[2] || {}; // 前々回 R5/11
+  const c3 = r[3] || {}; // 4回前 R4/11
+  const c4 = r[4] || {}; // 5回前 R3/12
+  const c5 = r[5] || {}; // 原点 R3/02 (健康時)
 
   const items = [
-    { cat: "身体計測", name: "身長 (cm)", v0: c0.height, v1: c1.height, v2: c2.height, v3: c3.height, ref: "─", note: "安定" },
-    { cat: "身体計測", name: "体重 (kg)", v0: c0.weight, v1: c1.weight, v2: c2.weight, v3: c3.weight, ref: "適正 68.1kg", note: "微増傾向 (+2.1kg)" },
-    { cat: "身体計測", name: "腹囲 (cm)", v0: c0.waist, v1: c1.waist, v2: c2.waist, v3: c3.waist, ref: "< 85.0 (男性)", note: "メタボ基準超過", isHigh: v => v >= 85 },
-    { cat: "身体計測", name: "BMI", v0: c0.bmi, v1: c1.bmi, v2: c2.bmi, v3: c3.bmi, ref: "18.5 〜 24.9", note: "肥満1度域", isHigh: v => v >= 25.0 },
+    { cat: "身体計測", name: "身長 (cm)", v0: c0.height, v1: c1.height, v2: c2.height, v3: c3.height, v4: c4.height, v5: c5.height, ref: "─", note: "安定" },
+    { cat: "身体計測", name: "体重 (kg)", v0: c0.weight, v1: c1.weight, v2: c2.weight, v3: c3.weight, v4: c4.weight, v5: c5.weight, ref: "適正 68.1kg", note: "原点比 +4.4kg (目標65kgへ減量推奨)" },
+    { cat: "身体計測", name: "腹囲 (cm)", v0: c0.waist, v1: c1.waist, v2: c2.waist, v3: c3.waist, v4: c4.waist, v5: c5.waist, ref: "< 85.0 (男性)", note: "メタボ基準超過持続", isHigh: v => v >= 85 },
+    { cat: "身体計測", name: "BMI", v0: c0.bmi, v1: c1.bmi, v2: c2.bmi, v3: c3.bmi, v4: c4.bmi, v5: c5.bmi, ref: "18.5 〜 24.9", note: "肥満1度域 (原点24.9➔26.2)", isHigh: v => v >= 25.0 },
     
-    { cat: "血圧", name: "収縮期血圧 (mmHg)", v0: c0.bpSys, v1: c1.bpSys, v2: c2.bpSys, v3: c3.bpSys, ref: "< 130 (至適<120)", note: "高値血圧（降圧継続）", isHigh: v => v >= 130 },
-    { cat: "血圧", name: "拡張期血圧 (mmHg)", v0: c0.bpDia, v1: c1.bpDia, v2: c2.bpDia, v3: c3.bpDia, ref: "< 85 (至適<80)", note: "境界域", isHigh: v => v >= 85 },
+    { cat: "血圧", name: "収縮期血圧 (mmHg)", v0: c0.bpSys, v1: c1.bpSys, v2: c2.bpSys, v3: c3.bpSys, v4: c4.bpSys, v5: c5.bpSys, ref: "< 130 (至適<120)", note: "原点119➔現在136 (降圧管理中)", isHigh: v => v >= 130 },
+    { cat: "血圧", name: "拡張期血圧 (mmHg)", v0: c0.bpDia, v1: c1.bpDia, v2: c2.bpDia, v3: c3.bpDia, v4: c4.bpDia, v5: c5.bpDia, ref: "< 85 (至適<80)", note: "境界域 (原点79➔85〜87)", isHigh: v => v >= 85 },
 
-    { cat: "血中脂質", name: "LDLコレステロール", v0: c0.ldl, v1: c1.ldl, v2: c2.ldl, v3: c3.ldl, ref: "< 120 (冠動脈後<70)", note: "高LDL血症・スタチン服薬中", isHigh: v => v >= 120 },
-    { cat: "血中脂質", name: "HDLコレステロール", v0: c0.hdl, v1: c1.hdl, v2: c2.hdl, v3: c3.hdl, ref: "> 40 mg/dL", note: "善玉十分・極めて良好◎" },
-    { cat: "血中脂質", name: "中性脂肪 (TG)", v0: c0.tg, v1: c1.tg, v2: c2.tg, v3: c3.tg, ref: "< 150 mg/dL", note: "良好・改善推移" },
-    { cat: "血中脂質", name: "non-HDLコレステロール", v0: c0.nonHdl, v1: c1.nonHdl, v2: c2.nonHdl, v3: c3.nonHdl, ref: "< 150 mg/dL", note: "高値持続", isHigh: v => v >= 150 },
-    { cat: "血中脂質", name: "LH比 (LDL÷HDL)", v0: (c0.ldl&&c0.hdl)?(c0.ldl/c0.hdl).toFixed(2):null, v1: (c1.ldl&&c1.hdl)?(c1.ldl/c1.hdl).toFixed(2):null, v2: (c2.ldl&&c2.hdl)?(c2.ldl/c2.hdl).toFixed(2):null, v3: (c3.ldl&&c3.hdl)?(c3.ldl/c3.hdl).toFixed(2):null, ref: "< 2.0 (冠リスク<1.5)", note: "血管プラーク蓄積リスク", isHigh: v => v > 2.0 },
+    { cat: "血中脂質", name: "LDLコレステロール", v0: c0.ldl, v1: c1.ldl, v2: c2.ldl, v3: c3.ldl, v4: c4.ldl, v5: c5.ldl, ref: "< 120 (冠リスク<70)", note: "一貫して高値・スタチン治療継続中", isHigh: v => v >= 120 },
+    { cat: "血中脂質", name: "HDLコレステロール", v0: c0.hdl, v1: c1.hdl, v2: c2.hdl, v3: c3.hdl, v4: c4.hdl, v5: c5.hdl, ref: "> 40 mg/dL", note: "善玉58➔68mg/dLと極めて優秀◎" },
+    { cat: "血中脂質", name: "中性脂肪 (TG)", v0: c0.tg, v1: c1.tg, v2: c2.tg, v3: c3.tg, v4: c4.tg, v5: c5.tg, ref: "< 150 mg/dL", note: "全期間通して良好◎" },
+    { cat: "血中脂質", name: "総コレステロール", v0: c0.totalChol, v1: c1.totalChol, v2: c2.totalChol, v3: c3.totalChol, v4: c4.totalChol, v5: c5.totalChol, ref: "140 〜 199", note: "高値持続", isHigh: v => v >= 200 },
+    { cat: "血中脂質", name: "LH比 (LDL÷HDL)", v0: (c0.ldl&&c0.hdl)?(c0.ldl/c0.hdl).toFixed(2):null, v1: (c1.ldl&&c1.hdl)?(c1.ldl/c1.hdl).toFixed(2):null, v2: (c2.ldl&&c2.hdl)?(c2.ldl/c2.hdl).toFixed(2):null, v3: (c3.ldl&&c3.hdl)?(c3.ldl/c3.hdl).toFixed(2):null, v4: (c4.ldl&&c4.hdl)?(c4.ldl/c4.hdl).toFixed(2):null, v5: (c5.ldl&&c5.hdl)?(c5.ldl/c5.hdl).toFixed(2):null, ref: "< 2.0 (冠リスク<1.5)", note: "動脈硬化プラーク警戒域 (2.2〜2.6)", isHigh: v => v > 2.0 },
 
-    { cat: "肝機能", name: "AST (GOT) (U/L)", v0: c0.ast, v1: c1.ast, v2: c2.ast, v3: c3.ast, ref: "< 30 U/L", note: "正常" },
-    { cat: "肝機能", name: "ALT (GPT) (U/L)", v0: c0.alt, v1: c1.alt, v2: c2.alt, v3: c3.alt, ref: "< 30 U/L", note: "正常範囲内" },
-    { cat: "肝機能", name: "γ-GTP (U/L)", v0: c0.ggtp, v1: c1.ggtp, v2: c2.ggtp, v3: c3.ggtp, ref: "< 50 U/L", note: "軽度超過（アルコール/代謝影響）", isHigh: v => v >= 50 },
+    { cat: "肝機能・代謝", name: "AST (GOT) (U/L)", v0: c0.ast, v1: c1.ast, v2: c2.ast, v3: c3.ast, v4: c4.ast, v5: c5.ast, ref: "< 30 U/L", note: "正常" },
+    { cat: "肝機能・代謝", name: "ALT (GPT) (U/L)", v0: c0.alt, v1: c1.alt, v2: c2.alt, v3: c3.alt, v4: c4.alt, v5: c5.alt, ref: "< 30 U/L", note: "ほぼ正常範囲" },
+    { cat: "肝機能・代謝", name: "γ-GTP (U/L)", v0: c0.ggtp, v1: c1.ggtp, v2: c2.ggtp, v3: c3.ggtp, v4: c4.ggtp, v5: c5.ggtp, ref: "< 50 U/L", note: "アルコール・脂肪肝による高値推移", isHigh: v => v >= 50 },
+    { cat: "肝機能・代謝", name: "血清尿酸値 (UA)", v0: c0.ua, v1: c1.ua, v2: c2.ua, v3: c3.ua, v4: c4.ua, v5: c5.ua, ref: "< 7.0 mg/dL", note: "5.5〜6.5で安全域キープ◎ (痛風なし)" },
 
-    { cat: "糖代謝", name: "空腹時血糖 (mg/dL)", v0: c0.fpg, v1: c1.fpg, v2: c2.fpg, v3: c3.fpg, ref: "< 100 mg/dL", note: "境界型（高め推移）", isHigh: v => v >= 100 },
-    { cat: "糖代謝", name: "HbA1c (NGSP) (%)", v0: c0.hba1c, v1: c1.hba1c, v2: c2.hba1c, v3: c3.hba1c, ref: "< 5.6 (基準<6.0)", note: "耐糖能低下予備群", isHigh: v => v >= 6.0 },
+    { cat: "糖代謝", name: "空腹時血糖 (mg/dL)", v0: c0.fpg, v1: c1.fpg, v2: c2.fpg, v3: c3.fpg, v4: c4.fpg, v5: c5.fpg, ref: "< 100 mg/dL", note: "原点99➔103〜113 (境界域)", isHigh: v => v >= 100 },
+    { cat: "糖代謝", name: "HbA1c (NGSP) (%)", v0: c0.hba1c, v1: c1.hba1c, v2: c2.hba1c, v3: c3.hba1c, v4: c4.hba1c, v5: c5.hba1c, ref: "< 5.6 (基準<6.0)", note: "原点5.7%➔6.0%で持続 (メタボ連動)", isHigh: v => v >= 6.0 },
 
-    { cat: "腎機能・貧血", name: "血清クレアチニン (mg/dL)", v0: c0.cre, v1: c1.cre, v2: c2.cre, v3: c3.cre, ref: "< 1.00 (男性)", note: "正常" },
-    { cat: "腎機能・貧血", name: "推算GFR (eGFR)", v0: c0.egfr, v1: c1.egfr, v2: c2.egfr, v3: c3.egfr, ref: "> 60 mL/min", note: "加齢相応・機能保持◎" },
-    { cat: "腎機能・貧血", name: "赤血球数 (万/mm³)", v0: c0.rbc, v1: c1.rbc, v2: c2.rbc, v3: c3.rbc, ref: "400 〜 539", note: "正常" },
-    { cat: "腎機能・貧血", name: "血色素量 Hb (g/dL)", v0: c0.hb, v1: c1.hb, v2: c2.hb, v3: c3.hb, ref: "13.1 〜 16.6", note: "造血良好（貧血なし）" }
+    { cat: "腎機能・貧血", name: "推算GFR (eGFR)", v0: c0.egfr, v1: c1.egfr, v2: c2.egfr, v3: c3.egfr, v4: c4.egfr, v5: c5.egfr, ref: "> 60 mL/min", note: "原点55〜58➔近年63〜75へ大きく改善◎" },
+    { cat: "腎機能・貧血", name: "血清クレアチニン (mg/dL)", v0: c0.cre, v1: c1.cre, v2: c2.cre, v3: c3.cre, v4: c4.cre, v5: c5.cre, ref: "< 1.00 (男性)", note: "1.09➔0.84〜0.95 (改善維持)" },
+    { cat: "腎機能・貧血", name: "血色素量 Hb (g/dL)", v0: c0.hb, v1: c1.hb, v2: c2.hb, v3: c3.hb, v4: c4.hb, v5: c5.hb, ref: "13.1 〜 16.6", note: "造血良好（貧血なし）" }
   ];
 
   let lastCat = "";
@@ -711,15 +751,16 @@ function renderCheckupMatrixTable() {
     if (it.cat !== lastCat) {
       const catTr = document.createElement('tr');
       catTr.className = "matrix-cat-row";
-      catTr.innerHTML = `<td colspan="8">${it.cat}</td>`;
+      catTr.innerHTML = `<td colspan="10">${it.cat}</td>`;
       tbody.appendChild(catTr);
       lastCat = it.cat;
     }
 
-    const formatCell = (val, fnHigh) => {
+    const formatCell = (val, fnHigh, isBase = false) => {
       if (val === undefined || val === null || val === '') return `<td class="center" style="color:var(--text-muted);">--</td>`;
       const isH = fnHigh ? fnHigh(parseFloat(val)) : false;
-      return `<td class="center ${isH ? 'matrix-val-high' : 'matrix-val-normal'}">${val}${isH ? ' <small style="font-size:0.65rem;">[H]</small>' : ''}</td>`;
+      const baseClass = isBase ? 'matrix-val-baseline' : '';
+      return `<td class="center ${baseClass} ${isH ? 'matrix-val-high' : 'matrix-val-normal'}">${val}${isH ? ' <small style="font-size:0.65rem;">[H]</small>' : ''}</td>`;
     };
 
     const tr = document.createElement('tr');
@@ -730,6 +771,8 @@ function renderCheckupMatrixTable() {
       ${formatCell(it.v1, it.isHigh)}
       ${formatCell(it.v2, it.isHigh)}
       ${formatCell(it.v3, it.isHigh)}
+      ${formatCell(it.v4, it.isHigh)}
+      ${formatCell(it.v5, it.isHigh, true)}
       <td style="font-size:0.72rem; color:var(--text-muted);">${it.ref}</td>
       <td style="font-size:0.74rem; color:var(--text-muted);">${it.note}</td>
     `;
@@ -737,7 +780,7 @@ function renderCheckupMatrixTable() {
   });
 }
 
-// 🔍 心電図・眼底・医師所見 経年推移の描画
+// 🔍 心電図・エコー・眼底・医師所見 経年推移の描画（全6回分）
 function renderCheckupFindingsTable() {
   const tbody = document.getElementById('checkupFindingsTableBody');
   if (!tbody) return;
@@ -745,12 +788,15 @@ function renderCheckupFindingsTable() {
 
   const r = globalCheckupHistory || [];
   r.forEach(item => {
+    const isBaseline = item.yearLabel && item.yearLabel.includes('原点');
     const tr = document.createElement('tr');
+    if (isBaseline) tr.className = "matrix-val-baseline";
     tr.innerHTML = `
       <td style="font-weight:bold; color:var(--accent-blue);">${item.yearLabel}</td>
       <td>${item.date || '--'}</td>
       <td><span style="background:rgba(251,191,36,0.15); color:var(--accent-amber); padding:2px 6px; border-radius:4px; font-weight:bold;">${item.metabolicJudge || '--'}</span></td>
       <td style="font-weight:bold; color:#ffffff;">${item.ecg || '異常なし'}</td>
+      <td style="color:var(--accent-cyan); font-weight:600;">${item.echo || '異常所見なし'}</td>
       <td style="color:var(--accent-green);">${item.fundus || '異常なし'}</td>
       <td style="font-size:0.74rem; color:var(--text-muted); line-height:1.4;">${escapeHtml(item.doctorComment || '--')}</td>
     `;
@@ -758,12 +804,12 @@ function renderCheckupFindingsTable() {
   });
 }
 
-// 🤖 経年ドック総合アセスメント（AIコール ＆ 高精度ルールベース）
+// 🤖 経年ドック総合アセスメント（AIコール ＆ 2021年原点対比ルールベース）
 async function runCheckupAiReview() {
   const outputEl = document.getElementById('checkupAiReviewOutputArea');
   const apiKey = (localStorage.getItem(MASTER_KEY_GEMINI_KEY) || '').trim();
 
-  outputEl.innerHTML = "専任循環器内科専門医および管理栄養士が過去3〜4カ年の健診推移データを照合し、経年クリニカルレビューを生成中です...";
+  outputEl.innerHTML = "専任循環器内科専門医および管理栄養士が、2021年春の健康原点と現在のデータを突き合わせ、5〜6カ年の詳細病態アセスメントを生成中です...";
 
   if (!globalCheckupHistory || globalCheckupHistory.length === 0) {
     outputEl.textContent = "健診データが登録されていません。";
@@ -775,22 +821,22 @@ async function runCheckupAiReview() {
       const summary = JSON.stringify(globalCheckupHistory, null, 2);
       const prompt = `
 あなたは循環器内科専門医「Dr.ケン」と臨床病態管理栄養士「アヤ」です。
-以下の過去3カ年以上の人間ドック・特定健診データ推移を熟読し、専門医と栄養士の視点から経年的な臨床評価と生活習慣指導を日本語で記述してください。
+以下の過去5〜6回分（2021年春〜2025年秋）の人間ドック・特定健診データ推移を熟読し、専門医と栄養士の視点から経年的な臨床評価と生活習慣指導を日本語で記述してください。
 
-【患者の人間ドック経年推移データ】
+【患者の人間ドック5〜6カ年推移データ】
 ${summary}
 
-【出力要件（途切れ防止の厳守）】
+【出力要件（途切れ防止の厳守・2021年原点対比の強調）】
 ※文字数オーバーによる文章末尾の途切れを絶対に防ぐため、要点を簡潔・明快にまとめ、必ず文章の結び（句点）まで完結させて出力してください。
 ※特に以下の重要所見について言及してください：
 1. 🫀 【Dr.ケン (循環器内科) の経年評価】:
-   - 動脈硬化・脂質プロファイル: LDLが165mg/dL前後で推移、LH比2.66、冠動脈イベント既往との関連
-   - 心電図の推移: 完全右脚ブロック（および前回の左脚前肢ブロック）の意義と臨床的注意点
-   - 血圧・腎機能（eGFR 72で保持されていることの評価）
+   - 2021年春の原点（76.8kg、血圧119/79、HbA1c 5.7%、メタボ非該当）からの体重約4.4kg増加と、それに伴う血圧・LDL・腹囲の病態変化
+   - 腎機能（eGFRが2021年の55〜58から、近年63〜75へと大きく改善・維持されていることの医学的評価）
+   - 心電図伝導障害（左軸偏位 ➔ 右軸偏位 ➔ 完全右脚ブロック固定）の意義
+   - 尿酸値（5.5〜6.5mg/dLで安全域維持）と冠動脈二次予防（LDL目標70未満、アトルバスタチン等の継続）
 2. 🥗 【管理栄養士 アヤ の栄養・代謝処方】:
-   - 耐糖能・メタボ傾向: HbA1c 6.0%の持続、腹囲90cm・体重81.2kgの微増に対する食事・GI値コントロール
-   - 肝機能: γ-GTP 84U/Lに対するアルコール・脂肪肝対策
-   - 今後の具体的な生活習慣改善アクション
+   - 耐糖能・脂肪肝ドミノ: 体重増加に伴い腹部エコーで脂肪肝が出現し、HbA1cが6.0%で持続していることに対する「76kg原点回帰・65kg目標」のアクション
+   - 食物繊維ファースト、間食・アルコール管理、カリウム食材による減塩推進
       `.trim();
 
       const response = await callGeminiApiWithFallback(apiKey, prompt);
@@ -814,23 +860,26 @@ function runRuleBasedCheckupReview() {
 
 function generateRuleBasedCheckupReview() {
   const r = globalCheckupHistory || [];
-  const c0 = r[0] || {};
-  const c2 = r[r.length - 1] || {};
+  const c0 = r[0] || {}; // 今回
+  const cBase = r[r.length - 1] || {}; // 原点
 
-  const wDiff = (c0.weight && c2.weight) ? (c0.weight - c2.weight).toFixed(1) : 0;
+  const wDiff = (c0.weight && cBase.weight) ? (c0.weight - cBase.weight).toFixed(1) : 4.4;
   const lhRatio = (c0.ldl && c0.hdl) ? (c0.ldl / c0.hdl).toFixed(2) : 2.66;
 
-  let doc = `<div class="conf-doc"><b style="color:var(--accent-blue); font-size:0.88rem;">🩺 Dr.ケン (循環器内科) の経年クリニカル所見:</b><br>`;
-  doc += `過去3カ年の健診推移を精査しました。<br>`;
-  doc += `・<b>脂質・動脈硬化リスク (LH比 ${lhRatio}):</b> LDLコレステロールは 166 ➔ 172 ➔ <b>165 mg/dL</b> と一貫して高値推移しています。HDLは62mg/dLと良好ですが、LH比は2.66と基準（2.0以下、冠動脈二次予防では1.5以下）を超過しています。プラーク形成予防のため、アトルバスタチン等の処方薬継続と食事管理が最重要です。<br>`;
-  doc += `・<b>心電図（完全右脚ブロック）の経過:</b> 前回一時的に左脚前肢ブロックの併発を認めましたが、今回は単独の完全右脚ブロックです。健常人にも見られる所見ですが、動悸や失神等の自覚症状がないか経過観察を継続しましょう。<br>`;
-  doc += `・<b>腎機能 (eGFR ${c0.egfr || 72}):</b> クレアチニン0.84、eGFR 72と、3年間を通して良好に保たれています。血圧コントロールが腎保護に直結しています。</div>`;
+  let doc = `<div class="conf-doc"><b style="color:var(--accent-blue); font-size:0.88rem;">🩺 Dr.ケン (循環器内科) の5〜6カ年クリニカル所見:</b><br>`;
+  doc += `2021年春の健康原点（76.8kg）から直近（81.2kg）までの経年推移を精査しました。<br>`;
+  doc += `・<b>病態の原点対比（体重 +${wDiff}kg）:</b> 2021年2月時点では血圧 <b>119/79 mmHg</b>、HbA1c <b>5.7%</b>、メタボ判定「非該当」と極めて健康な状態でした。その後の約4.4kgの体重増加に伴い、血圧が130台へ上昇し、腹囲が86cmから90cmへ拡大してメタボリックシンドロームが進行しています。原点である76kg台への減量が最大の根本治療となります。<br>`;
+  doc += `・<b>腎機能の劇的改善（eGFR 55.6 ➔ 72.0）:</b> 2021年冬に一時eGFR 55.6（クレアチニン1.09）まで低下していましたが、直近では <b>eGFR 72.0</b> まで回復・維持されています。血圧管理と水分摂取が腎保護に直結しています。<br>`;
+  doc += `・<b>脂質と心血管リスク (LH比 ${lhRatio}):</b> LDLは5年間一貫して140〜172mg/dLで推移。動脈硬化プラーク進展防止のためアトルバスタチン等の服薬遵守が不可欠です。<br>`;
+  doc += `・<b>心電図と尿酸値:</b> 完全右脚ブロックが固定化していますが、尿酸値は <b>5.5〜6.5 mg/dL</b> と痛風警戒ライン（7.0）未満を安全に保てています。</div>`;
 
   let nut = `<div class="conf-nut"><b style="color:var(--accent-green); font-size:0.88rem;">🥗 管理栄養士 アヤ の栄養・代謝処方:</b><br>`;
-  doc += `・<b>耐糖能・体型トレンド (体重 ${wDiff >= 0 ? `+${wDiff}` : wDiff}kg):</b> 体重が 79.1kg から 81.2kg へと微増し、腹囲は 90cm（基準85cm以上）を維持。これに伴い HbA1c は3年間連続で <b>6.0%</b>（空腹時血糖103）とメタボ予備群レベルで高止まりしています。<br>`;
-  nut += `・<b>実践アドバイス:</b><br>`;
-  nut += `① <b>血糖スパイク防止:</b> 食物繊維（海藻・きのこ・野菜小鉢）ファーストを徹底し、白米のポーションを「普通」から「やや少なめ」へ。<br>`;
-  nut += `② <b>肝機能 (γ-GTP 84U/L) と脂質ケア:</b> 週2日の休肝日を確実に設け、飽和脂肪酸（肉の脂身・揚げ物）を控え、EPA/DHAの青魚や焼き鳥（ささみ・レバー）、豆腐や納豆へ置き換えましょう！</div>`;
+  nut += `・<b>脂肪肝ドミノと耐糖能の改善（原点回帰アプローチ）:</b><br>`;
+  nut += `腹部エコーでは、2021年春には見られなかった「脂肪肝」が体重増加に伴って出現し、HbA1cも <b>5.7% ➔ 6.0%</b> へシフトして高止まりしています。<br>`;
+  nut += `・<b>実践処方箋:</b><br>`;
+  nut += `① <b>内臓脂肪の減少:</b> まずは2021年当時の「76kg台」を目指し、最終目標「65kg」へ向けて夕食の糖質・脂質ポーションを「普通」から「少なめ」へ調整。<br>`;
+  nut += `② <b>ベジファースト徹底:</b> 食後血糖スパイクを防ぎインスリン分泌を抑えるため、毎食野菜小鉢や海藻・きのこを最初に摂取。<br>`;
+  nut += `③ <b>休肝日の死守:</b> 脂肪肝とγ-GTP改善のため週2日の完全休肝日を継続しましょう！</div>`;
 
   return doc + nut;
 }
@@ -875,14 +924,13 @@ function loadDataFromLocalStorage() {
   }
 }
 
-// 💾 PC Viewerからの完全共通JSONエクスポート（既往歴・ドック経年情報も完全保存）
 function exportViewerJSON() {
   readMasterMedsFromUI();
   autoSaveClinicalHistory();
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const fullBackup = {
-    version: "v1.5.3",
+    version: "v1.6.2",
     exportedAt: new Date().toISOString(),
     profile: globalProfile,
     clinicalHistory: globalClinicalHistory,
@@ -902,7 +950,6 @@ function exportViewerJSON() {
   URL.revokeObjectURL(url);
 }
 
-// 📂 PC Viewerへの完全共通JSONインポート（新臨床データも完全復元）
 function importViewerJSON(event) {
   const file = event.target.files[0];
   if (!file) return;
@@ -981,6 +1028,7 @@ function importViewerJSON(event) {
   reader.readAsText(file);
 }
 
+// タブ切り替え制御（可視化連動レンダリング：DOMサイズ確定後にグラフ再描画）
 function switchViewerTab(tabId) {
   document.querySelectorAll('.nav-tabs .tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
@@ -990,16 +1038,18 @@ function switchViewerTab(tabId) {
   });
 
   if (tabId === 'analysisTab') {
-    setTimeout(refreshAnalysis, 50);
+    setTimeout(refreshAnalysis, 80);
   } else if (tabId === 'checkupTab') {
-    setTimeout(refreshCheckupAnalytics, 50);
+    setTimeout(() => {
+      refreshCheckupAnalytics();
+    }, 80);
   } else if (tabId === 'reportTab') {
-    setTimeout(generateDoctorReport, 50);
+    setTimeout(generateDoctorReport, 80);
   }
 }
 
 // =========================================================
-// TAB 1: お薬マスタ管理（自動保存・2段分離・並び替え）
+// TAB 1: お薬マスタ管理
 // =========================================================
 function renderMasterMedsTable() {
   const activeTbody = document.getElementById('medActiveTableBody');
@@ -1198,7 +1248,7 @@ function syncMedNamesWithHistory() {
   }
 }
 
-// 食品辞書 レンダリング（food_dict.js の COMPREHENSIVE_FOOD_DICT を参照）
+// 食品辞書 レンダリング
 function renderDictTable() {
   const catFilter = document.getElementById('dictCatFilter').value;
   const search = document.getElementById('dictSearchInput').value.trim().toLowerCase();
@@ -1267,7 +1317,7 @@ async function runAiConsultation() {
   const query = (inputEl.value || '').trim();
 
   if (!query) {
-    alert("相談内容や質問、食べた食事を入力してください。（例: お昼に定食屋で生姜焼きを食べたがどれを選べばいい？ / LDLが165でステント治療歴があるが、目標値は？）");
+    alert("相談内容や質問、食べた食事を入力してください。（例: お昼に定食屋で生姜焼きを食べたがどれを選べばいい？ / 2021年と比べて体重が4kg増えたが、何を優先すべき？）");
     return;
   }
 
@@ -1306,7 +1356,7 @@ async function runAiConsultation() {
 【匿名患者臨床プロファイル】
 年代/性別: ${globalProfile.age || '50代'} ${globalProfile.gender || '男性'} (身長: ${globalProfile.height || 176.0}cm)
 重点ケア疾患: ${(globalProfile.cares || ['高血圧', '脂質異常症', '境界型耐糖能']).join(', ')}
-患者の既往歴・人間ドック検査情報:
+患者の既往歴・健診推移検査情報:
 ${clinicalHistSummary}
 現在服用中のお薬・サプリ(正式規格): ${medsSummary}
 直近14日間の平均血圧: ${avgSys ? `${avgSys}/${avgDia} mmHg` : '未測定'}
@@ -1321,7 +1371,7 @@ ${memoContext}
   const prompt = `
 あなたは循環器内科専門医「Dr.ケン」と臨床病態管理栄養士「アヤ」です。
 ユーザーから健康相談または食事メニューの登録相談が寄せられました。
-以下の【匿名患者臨床プロファイル】（特に既往歴、LDL 165、HbA1c 6.0%、完全右脚ブロック）および【登録可能メニュー一覧】を熟読した上で、相談内容の性質に応じてスマートに回答者を振り分け（トリアージ）、専門的かつ親切に回答してください。
+以下の【匿名患者臨床プロファイル】（特に2021年の健康時との対比、LDL 165mg/dL、HbA1c 6.0%、完全右脚ブロック）および【登録可能メニュー一覧】を熟読した上で、相談内容の性質に応じてスマートに回答者を振り分け（トリアージ）、専門的かつ親切に回答してください。
 
 【厳格なプライバシー保護要件】
 ※個人を特定できる情報（氏名・住所等）は一切出力せず、医学的・栄養学的知見のみを出力してください。
@@ -1368,7 +1418,7 @@ ${query}
 
 function generateRuleBasedConsultation(query) {
   const q = query.toLowerCase();
-  const isMedOrBp = /血圧|薬|降圧|アスピリン|タケキャブ|ジルムロ|スタチン|カルベジロール|頭痛|めまい|熱|脈|心臓|胸|ステント|ldl|コレステロール|中性脂肪|検査|右脚ブロック/.test(q);
+  const isMedOrBp = /血圧|薬|降圧|アスピリン|タケキャブ|ジルムロ|スタチン|カルベジロール|頭痛|めまい|熱|脈|心臓|胸|ステント|ldl|コレステロール|中性脂肪|検査|右脚ブロック|尿酸/.test(q);
   const isFood = /食べ|飯|食|朝食|昼食|夕食|ラーメン|味噌汁|定食|生姜焼|肉|魚|寿司|カレー|間食|酒|ビール|カロリー|塩分|明太子|チーズ/.test(q);
 
   let suggestions = [];
@@ -1395,10 +1445,10 @@ function generateRuleBasedConsultation(query) {
 
   if (isMedOrBp && !isFood) {
     html += `<div class="conf-doc"><b style="color:var(--accent-blue); font-size:0.88rem;">🩺 Dr.ケン (循環器内科) の臨床回答:</b><br>`;
-    html += `お薬や血圧、臨床検査（直近LDL: 165mg/dL、HbA1c: 6.0%、完全右脚ブロック）に関するご相談ですね。<br>`;
-    html += `冠動脈保護の観点からは、家庭血圧の安定（125/75未満）とアトルバスタチン等の服薬遵守、そしてLDL/HDL比の抑制が極めて重要です。<br>`;
+    html += `お薬や血圧、臨床検査（直近LDL: 165mg/dL、HbA1c: 6.0%、完全右脚ブロック、尿酸値安全域維持）に関するご相談ですね。<br>`;
+    html += `2021年の健康時（76.8kg）から約4kgの体重増加に伴い血圧やメタボ傾向が高止まりしています。冠動脈保護のためには家庭血圧（125/75未満）の安定とアトルバスタチン等の服薬遵守、そして76kg台への原点回帰が最も効果的です。<br>`;
     html += `処方薬の継続服用と、急激な血圧変動や脱水の防止を意識してください。気になる変化が続く際は主治医へご相談ください。<br><br>`;
-    html += `<small style="color:var(--text-muted);">※マスタ管理室でAPIキーを登録すると、Gemini AIが現在の処方名（${getFormalMedicationSummary()}）および健診経年データを踏まえ、パーソナライズされた助言を行います。</small></div>`;
+    html += `<small style="color:var(--text-muted);">※マスタ管理室でAPIキーを登録すると、Gemini AIが現在の処方名（${getFormalMedicationSummary()}）および過去6回の健診データを踏まえ、パーソナライズされた助言を行います。</small></div>`;
   } else if (isFood && !isMedOrBp) {
     html += `<div class="conf-nut"><b style="color:var(--accent-green); font-size:0.88rem;">🥗 管理栄養士 アヤ のメニュー処方:</b><br>`;
     if (suggestions.length > 0) {
@@ -1607,7 +1657,9 @@ function renderViewerBpChart(labels, mSys, mDia, nSys, nDia) {
   const canvas = document.getElementById('viewerBpChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  if (chartInstances.bp) chartInstances.bp.destroy();
+  if (chartInstances.bp) {
+    try { chartInstances.bp.destroy(); } catch (e) {}
+  }
 
   chartInstances.bp = new Chart(ctx, {
     type: 'line',
@@ -1658,7 +1710,9 @@ function renderViewerPfcCharts(labels, totalP, totalF, totalC, pArr, fArr, cArr)
   const canvasPie = document.getElementById('viewerPfcPieChart');
   if (canvasPie) {
     const ctxPie = canvasPie.getContext('2d');
-    if (chartInstances.pfcPie) chartInstances.pfcPie.destroy();
+    if (chartInstances.pfcPie) {
+      try { chartInstances.pfcPie.destroy(); } catch (e) {}
+    }
 
     chartInstances.pfcPie = new Chart(ctxPie, {
       type: 'doughnut',
@@ -1681,7 +1735,9 @@ function renderViewerPfcCharts(labels, totalP, totalF, totalC, pArr, fArr, cArr)
   const canvasStack = document.getElementById('viewerPfcStackChart');
   if (canvasStack) {
     const ctxStack = canvasStack.getContext('2d');
-    if (chartInstances.pfcStack) chartInstances.pfcStack.destroy();
+    if (chartInstances.pfcStack) {
+      try { chartInstances.pfcStack.destroy(); } catch (e) {}
+    }
 
     chartInstances.pfcStack = new Chart(ctxStack, {
       type: 'bar',
@@ -1709,7 +1765,9 @@ function renderViewerWeightStepsChart(labels, weights, steps) {
   const canvas = document.getElementById('viewerWeightStepsChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  if (chartInstances.weight) chartInstances.weight.destroy();
+  if (chartInstances.weight) {
+    try { chartInstances.weight.destroy(); } catch (e) {}
+  }
 
   chartInstances.weight = new Chart(ctx, {
     type: 'line',
@@ -1736,7 +1794,9 @@ function renderViewerSleepBpChart(labels, sleepH, mSys) {
   const canvas = document.getElementById('viewerSleepBpChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  if (chartInstances.sleep) chartInstances.sleep.destroy();
+  if (chartInstances.sleep) {
+    try { chartInstances.sleep.destroy(); } catch (e) {}
+  }
 
   chartInstances.sleep = new Chart(ctx, {
     type: 'line',
@@ -1759,7 +1819,7 @@ function renderViewerSleepBpChart(labels, sleepH, mSys) {
   });
 }
 
-// TAB 3: AI カンファレンス実行（既往歴・血液検査値完全連動）
+// TAB 3: AI カンファレンス実行
 async function runAiConference() {
   const outputEl = document.getElementById('conferenceOutputArea');
   const btn = document.getElementById('btnRunAi');
@@ -1823,7 +1883,7 @@ async function runAiConference() {
 【匿名患者基本情報・臨床背景】
 年齢/性別: ${globalProfile.age || '50代'} ${globalProfile.gender || '男性'}, 身長: ${globalProfile.height || 176.0}cm
 重点疾患: ${(globalProfile.cares || ['高血圧', '脂質異常症', '境界型耐糖能']).join(', ')}
-患者の既往歴・血液検査情報:
+患者の既往歴・血液検査情報(2021年原点76.8kgからの推移):
 ${clinicalHistSummary}
 現在服用中のお薬・サプリ(正式規格): ${medsSummary}
 
@@ -1859,7 +1919,7 @@ ${memoSectionText}
 async function callGeminiApiWithFallback(apiKey, summaryData) {
   const prompt = `
 あなたは循環器内科専門医「Dr.ケン」と臨床病態管理栄養士「アヤ」です。
-以下の患者バイタル、既往歴・血液検査情報、生活習慣データ、正式処方薬、および特記メモを分析し、専門医と栄養士の2つの視点から具体的で実用的な臨床カルテと栄養指導を日本語で記述してください。
+以下の患者バイタル、既往歴・血液検査情報（2021年の健康原点からの推移）、生活習慣データ、正式処方薬、および特記メモを分析し、専門医と栄養士の2つの視点から具体的で実用的な臨床カルテと栄養指導を日本語で記述してください。
 
 【厳格なプライバシー保護要件】
 ※個人を特定できる情報（氏名・居住地等）は一切出力せず、臨床医学的・栄養学的知見のみを出力してください。
@@ -1868,7 +1928,7 @@ ${summaryData}
 
 【出力要件（途切れ防止・メモ反映の厳守）】
 ※文字数オーバーによる文章末尾の途切れを絶対に防ぐため、各項目は要点を簡潔・具体的にまとめ、必ず文章の結び（句点）まで過不足なく完結させて出力してください。
-※患者の既往歴や検査数値（LDL 165mg/dL、HbA1c 6.0%、完全右脚ブロック等）、特記メモがある場合は、その臨床的背景を的確に拾い上げて言及してください。
+※患者の既往歴や検査数値（2021年の76.8kgから現在81.2kg、LDL 165mg/dL、HbA1c 6.0%、完全右脚ブロック等）、特記メモがある場合は、その臨床的背景を的確に拾い上げて言及してください。
 
 1. 🩺 【Dr.ケン (循環器内科) の臨床所見】:
    - 朝と就寝前の血圧差（モーニングサージ有無）
@@ -1938,7 +1998,7 @@ function generateRuleBasedClinicalAdvice(sysM, diaM, sysN, diaN, salt, pRate, fR
   }
 
   if (sysM < 125 && diaM < 75) {
-    docHtml += `期間中の朝血圧平均は <b>${sysM}/${diaM} mmHg</b> と、日本高血圧学会の家庭血圧至適基準（125/75未満）を完全にクリアしています。冠動脈および脳心血管病の再発リスクは低くコントロールされています。`;
+    docHtml += `期間中の朝血圧平均は <b>${sysM}/${diaM} mmHg</b> と、日本高血圧学会の家庭血圧至適基準（125/75未満）を完全にクリアしています。2021年の健康時（119/79）に近い良好な血管状態を維持できています。`;
   } else if (sysM <= 135) {
     docHtml += `朝血圧平均は <b>${sysM}/${diaM} mmHg</b>（正常高値域）。ステント留置後や心血管リスク保有時において、家庭血圧125未満の厳格な維持が血管内皮保護に直結します。起床時の冷え込み防止を継続しましょう。`;
   } else {
@@ -1977,7 +2037,7 @@ function generateRuleBasedClinicalAdvice(sysM, diaM, sysN, diaN, salt, pRate, fR
 
   nutHtml += `・<b>PFCバランス評価:</b> 蛋白 ${pRate}% / 脂質 ${fRate}% / 炭水化物 ${cRate}%。<br>`;
   if (fRate > 30) {
-    nutHtml += `脂質比率がやや高めです。お肉の脂身を抑え、焼き魚や焼き鳥（ささみ・レバー）、チーズや卵料理、サラダチキン、豆腐料理に置き換えることで、脂質異常症を力強く予防できます。日々のバランスを保ちながら健康習慣を続けていきましょう！</div>`;
+    nutHtml += `脂質比率がやや高めです。お肉の脂身を抑え、焼き魚や焼き鳥（ささみ・レバー）、チーズや卵料理、サラダチキン、豆腐料理に置き換えることで、脂肪肝と脂質異常症を力強く改善できます。2021年の健康時（76kg台）を目指してバランスを整えていきましょう！</div>`;
   } else {
     nutHtml += `理想的なマクロ栄養素比率を達成しています！この調子で良質なタンパク質（卵・魚・焼き鳥・チーズ・豆）と野菜小鉢・果物を維持していきましょう。</div>`;
   }
@@ -1986,7 +2046,7 @@ function generateRuleBasedClinicalAdvice(sysM, diaM, sysN, diaN, salt, pRate, fR
 }
 
 // =========================================================
-// TAB 4: 医師提出用 A4クリニック・レポート 生成ロジック
+// TAB 5: 医師提出用 A4クリニック・レポート 生成ロジック
 // =========================================================
 function generateDoctorReport() {
   const period = document.getElementById('reportPeriodSelect').value;
@@ -1999,14 +2059,22 @@ function generateDoctorReport() {
   const condEl = document.getElementById('repHpmConditions');
   const labEl = document.getElementById('repHpmLab');
   if (condEl) condEl.textContent = hist.conditions ? `${hist.conditions} ${hist.notes ? `(${hist.notes})` : ''}` : '特記なし（健康維持）';
+  
   if (labEl) {
-    const labTexts = [];
-    if (hist.checkDate) labTexts.push(`受診:${hist.checkDate}`);
-    if (hist.ldl) labTexts.push(`LDL:${hist.ldl}`);
-    if (hist.hba1c) labTexts.push(`HbA1c:${hist.hba1c}%`);
-    if (hist.egfr) labTexts.push(`eGFR:${hist.egfr}`);
-    if (hist.ecg) labTexts.push(`ECG:${hist.ecg}`);
-    labEl.textContent = labTexts.length > 0 ? labTexts.join(' / ') : '未登録';
+    const r = globalCheckupHistory || [];
+    if (r.length >= 2) {
+      const top = r[0] || {};
+      const base = r[r.length - 1] || {};
+      labEl.textContent = `2021年原点(${base.weight || 76.8}kg/A1c ${base.hba1c || 5.7}%/脂肪肝-) ➔ 近年(${top.weight || 81.2}kg/A1c ${top.hba1c || 6.0}%/脂肪肝+)。eGFRは55➔72改善維持。減量・減塩・スタチン治療継続中。`;
+    } else {
+      const labTexts = [];
+      if (hist.checkDate) labTexts.push(`受診:${hist.checkDate}`);
+      if (hist.ldl) labTexts.push(`LDL:${hist.ldl}`);
+      if (hist.hba1c) labTexts.push(`HbA1c:${hist.hba1c}%`);
+      if (hist.egfr) labTexts.push(`eGFR:${hist.egfr}`);
+      if (hist.ecg) labTexts.push(`ECG:${hist.ecg}`);
+      labEl.textContent = labTexts.length > 0 ? labTexts.join(' / ') : '未登録';
+    }
   }
 
   if (list.length === 0) {
@@ -2184,7 +2252,9 @@ function renderReportPrintChart(labels, mSys, nSys) {
   const canvas = document.getElementById('reportPrintChart');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  if (chartInstances.repChart) chartInstances.repChart.destroy();
+  if (chartInstances.repChart) {
+    try { chartInstances.repChart.destroy(); } catch (e) {}
+  }
 
   chartInstances.repChart = new Chart(ctx, {
     type: 'line',
