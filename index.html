@@ -1,4 +1,5 @@
-<!-- [稼働Ver 作業版 Rev.24] スマホ専任化・共通食品辞書連携・間食マスタ設定対応 (index.html) -->
+
+<!-- [稼働Ver 作業版 Rev.25] スマホ専任化・体重オートズーム・寝落ちアシスト・Androidスマート通知対応 (index.html) -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -161,6 +162,27 @@
       }
       .desktop-main-col { order: 1; }
       .desktop-side-panel { order: 2; position: sticky; top: 0; margin-bottom: 0; }
+    }
+
+    /* 🛌 昨晩寝落ちクイックアシスト・バナー */
+    .yesterday-recovery-banner {
+      display: none; background: linear-gradient(135deg, rgba(30, 27, 75, 0.95), rgba(15, 23, 42, 0.95));
+      border: 1px solid var(--accent-purple); border-left: 4px solid var(--accent-purple);
+      border-radius: var(--radius-sm); padding: 8px 12px; margin-bottom: 8px;
+      box-shadow: 0 4px 14px rgba(192, 132, 252, 0.2);
+    }
+    .yesterday-recovery-banner.show { display: block; }
+    .yr-banner-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+    .yr-banner-text { font-size: 0.76rem; font-weight: 800; color: #e9d5ff; display: flex; align-items: center; gap: 5px; }
+    .yr-banner-actions { display: flex; align-items: center; gap: 5px; }
+    .btn-yr-jump {
+      background: linear-gradient(135deg, #7c3aed, #9333ea); color: #ffffff;
+      border: none; padding: 4px 10px; border-radius: 5px; font-size: 0.72rem; font-weight: 800; cursor: pointer;
+    }
+    .btn-yr-jump:active { transform: scale(0.96); }
+    .btn-yr-dismiss {
+      background: transparent; border: 1px solid var(--border); color: var(--text-muted);
+      padding: 4px 8px; border-radius: 5px; font-size: 0.7rem; cursor: pointer;
     }
 
     /* スマート・アシスタントパネル */
@@ -411,6 +433,20 @@
     .chart-wrapper { position: relative; height: 220px; width: 100%; }
     .chart-hint { font-size: 0.68rem; color: var(--text-muted); margin-top: 4px; text-align: right; }
 
+    /* 体重チャート専用ヘッダー・ツール */
+    .weight-chart-tools {
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 4px;
+    }
+    .weight-target-badge-pill {
+      font-size: 0.72rem; font-weight: 800; padding: 2px 8px; border-radius: 12px;
+      background: rgba(251, 191, 36, 0.15); color: var(--accent-amber); border: 1px solid rgba(251, 191, 36, 0.4);
+    }
+    .btn-chart-zoom-toggle {
+      background: var(--bg-input); border: 1px solid var(--accent-blue); color: var(--accent-blue);
+      font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 5px; cursor: pointer; transition: var(--transition);
+    }
+    .btn-chart-zoom-toggle:hover { background: rgba(56, 189, 248, 0.2); }
+
     .expert-card { background: #131b2e; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px; margin-bottom: 8px; }
     .expert-box { background: rgba(8, 12, 22, 0.6); border-radius: 6px; padding: 7px 9px; margin-top: 5px; border-left: 3px solid var(--accent-blue); font-size: 0.76rem; line-height: 1.4; }
     .expert-box.nutrition { border-left-color: var(--accent-green); }
@@ -601,7 +637,7 @@
     <div class="top-row-1">
       <div class="brand-wrap">
         <div class="brand-title">🩺 <span>健康管理くん</span></div>
-        <span class="app-version-badge" id="appVersionBadge">v1.6.1</span>
+        <span class="app-version-badge" id="appVersionBadge">v1.6.2</span>
       </div>
       <nav class="nav-tabs">
         <button class="tab-btn active" data-tab="inputTab" onclick="switchTab('inputTab')">✍️ 入力</button>
@@ -634,6 +670,20 @@
 <!-- ② 中央スクロール領域 -->
 <div id="mainScrollView">
   <div class="scroll-inner-desktop">
+
+    <!-- 🛌 昨晩寝落ちクイックアシスト・バナー（朝起動時に前夜未入力の場合のみ表示） -->
+    <div id="yesterdayRecoveryBanner" class="yesterday-recovery-banner">
+      <div class="yr-banner-inner">
+        <div class="yr-banner-text">
+          <span>🛌</span>
+          <span>昨晩の就寝前（歩数・夜血圧・メモ）が未入力のようです。</span>
+        </div>
+        <div class="yr-banner-actions">
+          <button class="btn-yr-jump" onclick="jumpToYesterdayNight()">昨日の就寝前を記録する ➔</button>
+          <button class="btn-yr-dismiss" onclick="dismissYesterdayRecoveryBanner()">閉じる ✕</button>
+        </div>
+      </div>
+    </div>
 
     <!-- TAB 1: 入力画面 -->
     <main id="inputTab" class="tab-content active">
@@ -1200,10 +1250,17 @@
         <div class="streak-grid" id="streakCardGrid"></div>
       </div>
 
+      <!-- ⚖️ 体重トレンド（実測オートズーム ＆ 目標値スマート配置） -->
       <div class="card">
-        <h2 class="card-title">⚖️ 体重トレンド（7日移動平均線 ＆ 直近マイルストーン目標）</h2>
+        <div class="weight-chart-tools">
+          <h2 class="card-title" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">⚖️ 体重トレンド（実測フォーカス ＆ 7日平均線）</h2>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span class="weight-target-badge-pill" id="weightTargetDisplayBadge">🎯 目標: 65.0kg / 適正: 68.1kg</span>
+            <button class="btn-chart-zoom-toggle" id="btnToggleWeightZoom" onclick="toggleWeightChartZoom()">🔍 目標全体表示</button>
+          </div>
+        </div>
         <div class="chart-wrapper"><canvas id="weightTrendChart"></canvas></div>
-        <div class="chart-hint">※ 太青線：実質トレンド(7日平均) / ── 黄点線：目標体重 / ── 緑点線：適正体重(BMI22)</div>
+        <div class="chart-hint">※ 太青線：実質トレンド(7日SMA) / 点線：日々の実測値（微細な起伏を見やすく自動拡大中）</div>
       </div>
 
       <div class="card">
@@ -1228,7 +1285,7 @@
           <span id="notif_permission_badge" class="time-badge recorded">画面内見守り稼働中</span>
         </div>
         <div style="font-size:0.74rem; color:var(--text-muted); line-height:1.5; margin-bottom:8px; margin-top:6px;">
-          本ツールは完全ローカル＆GitHub Pages完結型です。PCではOS通知、スマートフォン（Android Chrome等）では画面内スマートトースト通知により、エラーなく100%安全に見守りが動作します。
+          本ツールは完全ローカル＆GitHub Pages完結型です。すでに入力済みの時間帯には催促を出さず、<b>未入力の場合のみ</b>スマート通知・トーストでそっとお知らせします。
         </div>
         <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
           <button class="btn btn-save" style="width:auto; margin-top:0;" onclick="enableDesktopNotification()">🔔 通知を有効化する（許可）</button>
@@ -1331,7 +1388,7 @@
         </div>
       </div>
 
-      <!-- マイお薬・サプリ設定（スマホ最適化スリム版：表示名＋朝昼晩就の選択に特化） -->
+      <!-- マイお薬・サプリ設定（スマホ最適化スリム版） -->
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <h2 class="card-title">💊 マイお薬・サプリ設定（服用タイミング）</h2>
@@ -1404,7 +1461,7 @@
         </table>
       </div>
 
-      <!-- 食事パーツ設定（朝・昼・晩・間食・夜食 5列チェック設定対応） -->
+      <!-- 食事パーツ設定 -->
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <h2 class="card-title">🍱 食事パーツ設定（全品マスタ・間食チェック対応）</h2>
@@ -1512,8 +1569,43 @@
         </div>
       </section>
 
+      <!-- 📱 Androidスマホ向け 未入力検知 ＆ スマートトリガー活用ガイド -->
+      <section class="guide-section" style="border-color: var(--accent-green);">
+        <h2 class="guide-title" style="color: var(--accent-green);">
+          <span>📱 （２）Androidスマホで「入力忘れ」を完全になくすスマートトリガー設定</span>
+        </h2>
+        <div class="guide-lead">
+          「入力済みなら邪魔せず完全サイレント、未入力のときだけ気づきが欲しい」を実現するAndroidおすすめの設定方法です。
+        </div>
+
+        <div class="guide-step-card" style="border-left: 3px solid var(--accent-blue);">
+          <div class="guide-step-title">【方法A】Google アシスタント「ルーティン」で決まった時間に自動オープン（最強）</div>
+          <div class="guide-text">
+            Android標準の「ルーティン」を使えば、朝7:30や夜21:00にスマホが自動で本アプリのURLを開きます。<br>
+            1. スマホの「設定」➔「Google」➔「Google アシスタント」➔「ルーティン」を開く。<br>
+            2. 「＋」で新規作成 ➔ 時間を「午前 7:30」に設定。<br>
+            3. 操作に「カスタム操作」を選び、<code>ブラウザで (健康管理くんのURL) を開く</code> と入力して保存！<br>
+            <b style="color:var(--accent-green);">※本アプリは入力済みならそのまま閉じるだけでOK、未入力ならその場で1分記録できます。</b>
+          </div>
+        </div>
+
+        <div class="guide-step-card" style="border-left: 3px solid var(--accent-amber);">
+          <div class="guide-step-title">【方法B】Googleカレンダー / ToDo のURL付き繰り返しリマインダー</div>
+          <div class="guide-text">
+            Googleカレンダーで「朝の血圧測定」「就寝前記録」を毎日繰り返しで登録し、メモ欄に健康管理くんのURLを貼っておくだけ。通知をタップすれば1秒で入力画面へ直接ジャンプできます。
+          </div>
+        </div>
+
+        <div class="guide-step-card" style="border-left: 3px solid var(--accent-purple);">
+          <div class="guide-step-title">【方法C】前夜に寝落ちしても安心！「翌朝クイック復帰」システム</div>
+          <div class="guide-text">
+            就寝前の記録を忘れて眠ってしまっても、<b>翌朝アプリを開いた瞬間に「昨晩の記録が未入力です」と上部バナーでお知らせします</b>。「昨日の就寝前を記録する」を押すだけで自動で昨日に戻り、記録後はワンタップで今朝へ迷わず復帰できます！
+          </div>
+        </div>
+      </section>
+
       <section class="guide-section">
-        <h2 class="guide-title">🎯 （２）健康管理くんの目的・狙い・コンセプト</h2>
+        <h2 class="guide-title">🎯 （３）健康管理くんの目的・狙い・コンセプト</h2>
         <div class="guide-lead">
           健康管理において最大の敵は<b>「毎日の面倒な計算」</b>と<b>「日々の体重・血圧の変動ノイズによる心理的挫折」</b>です。<br>
           「健康管理くん」は、最新の予防医学と行動経済学の知見に基づき、<b>「意志の力に頼らず、1回1分の手軽さで自然に続く」</b>ことを目指して設計されたローカル完結型ダッシュボードです。
@@ -1521,12 +1613,12 @@
       </section>
 
       <section class="guide-section">
-        <h2 class="guide-title">🧭 （３）毎日の操作手順（生活リズムに合わせた1分ルーティン）</h2>
+        <h2 class="guide-title">🧭 （４）毎日の操作手順（生活リズムに合わせた1分ルーティン）</h2>
         <div class="guide-lead">1日に何度も長考する必要はありません。生活の節目（朝・間食・昼・晩・夜食・就寝前）に1分以内でタップするだけです。オートセーブされるため、タブを閉じても消えません。就寝前にメモ欄へ一言入れておくと、PCビューワーの診察レポートやAIカンファレンスにも反映されます。</div>
       </section>
 
       <section class="guide-section">
-        <h2 class="guide-title">🏆 （４）本日の健康スコア採点基準（100点満点ルール）</h2>
+        <h2 class="guide-title">🏆 （５）本日の健康スコア採点基準（100点満点ルール）</h2>
         <table class="evidence-table">
           <thead>
             <tr><th>項目</th><th>配点</th><th>獲得条件（納得と公平のルール）</th></tr>
@@ -1543,14 +1635,14 @@
       </section>
 
       <section class="guide-section">
-        <h2 class="guide-title">👨‍⚕️ （５）あなたに伴走する専任医療チーム</h2>
+        <h2 class="guide-title">👨‍⚕️ （６）あなたに伴走する専任医療チーム</h2>
         <div class="character-card">
           <div class="char-avatar">🩺</div>
           <div>
             <div class="char-name">Dr. ケン（Ken）</div>
             <div class="char-role">循環器内科専門医 / 臨床高血圧学会認定医</div>
             <div class="char-desc">
-              「日々の血圧や体重が1〜2kg変動しても慌てる必要はありません。大切なのは<b>『7日間移動平均線（SMA7）』</b>と<b>『脈圧（血管のしなやかさ）』</b>です。奥様の味噌汁や外食時は『普通(1.2g)』、自分で具だくさんにした時は『汁半分(0.6g)』と割り切って選んでいただければ、正確にリスクを評価します。」
+              「日々の血圧や体重が1〜2kg変動しても慌てる必要はありません。1日で脂肪はそんなに増えません！大切なのは<b>『7日間移動平均線（SMA7）』</b>と<b>『脈圧（血管のしなやかさ）』</b>です。体重の波を見やすく実測ズーム表示に改良しましたので、落ち着いて傾向を掴んでいきましょう。」
             </div>
           </div>
         </div>
@@ -1561,7 +1653,7 @@
             <div class="char-name">管理栄養士 アヤ（Aya）</div>
             <div class="char-role">臨床病態栄養指導士 / 食習慣コーチ</div>
             <div class="char-desc">
-              「ラーメンやお肉、お酒も人生の大切な楽しみです！チーズや明太子、果物も仲間入りしました。PCビューワー側では全食品辞書を見ながら『今日食べたこの定食は何を登録すればいい？』とGemini AIにいつでも自由相談できますので、ぜひ活用してくださいね◎」
+              「食べ過ぎた翌日に体重が増えても落ち込まないでくださいね！それは脂肪ではなく、塩分を抱え込んだ『一時的な水分』です。バナナや野菜ジュース、納豆などのカリウム食材と水分でスーッと洗い流せば3日で元に戻りますよ◎」
             </div>
           </div>
         </div>
@@ -1570,7 +1662,7 @@
       <!-- 🧘‍♂️ デスクワーク疲労＆表情筋リカバリー・クリニック -->
       <section class="guide-section" style="border-color: var(--accent-blue);">
         <h2 class="guide-title" style="color: var(--accent-blue);">
-          <span>🧘‍♂️ （６）デスクワーク疲労 ＆ 表情筋リカバリー・クリニック</span>
+          <span>🧘‍♂️ （７）デスクワーク疲労 ＆ 表情筋リカバリー・クリニック</span>
         </h2>
         <div class="guide-lead">
           長時間のデスクワークによる「腰痛」「肩こり・目の疲れ」「顔のたるみ・表情じわ」は、解剖学的に**筋膜（Fascia）と血流の停滞**で繋がっています。座ったまま1〜2分でできる特効セルフケアです。
@@ -1735,14 +1827,17 @@
   </div>
 </div>
 
-<!-- 称賛モーダル -->
+<!-- 称賛モーダル（前日寝落ち復帰ボタン対応） -->
 <div class="modal-overlay" id="praiseModal" onclick="closePraiseModal(event)">
   <div class="modal-content" onclick="event.stopPropagation()">
     <div class="modal-icon">🎉</div>
     <h3 class="modal-title" id="praiseTitle">記録完了！偉い！</h3>
     <p class="modal-desc" id="praiseMsg">タイムリーに入力した勇気が命を守る！</p>
     <p class="modal-sub">朝の睡眠・歩数から夜の減塩まで、今日の自己管理が未来の健康を確実に作っています。</p>
-    <button class="btn btn-save" onclick="closePraiseModal()">OK</button>
+    <div id="praiseModalActionWrap" style="display:flex; flex-direction:column; gap:6px;">
+      <button class="btn btn-save" id="btnPraiseReturnToday" style="display:none; background:linear-gradient(135deg, #059669, #10b981);" onclick="returnToTodayMorning()">☀️ 今日の朝の記録へ進む</button>
+      <button class="btn btn-save" onclick="closePraiseModal()">OK</button>
+    </div>
   </div>
 </div>
 
