@@ -139,6 +139,12 @@ let globalMenus = [];
 let globalClinicalHistory = {};
 let globalCheckupHistory = [];
 
+// 現在ストックカルテフォームで編集中のインデックス (0: 最新回, 1〜: 過去回, -1: 新規追加)
+let currentEditingCheckupIndex = 0;
+
+// 人体マップ選択中の部位名
+let currentSelectedBodyPart = "";
+
 let chartInstances = {};
 
 // 💊 お薬データの完全自動救済ロジック
@@ -170,10 +176,15 @@ window.addEventListener('DOMContentLoaded', () => {
   loadSavedGeminiApiKey();
   loadClinicalHistory();
   loadCheckupHistory();
+  renderCheckupRecordSelector();
   renderMasterMedsTable();
   renderDictTable();
-  refreshAnalysis();
-  generateDoctorReport();
+  
+  // 初期タブ（多角ダッシュボード）の描画を確実に実行
+  setTimeout(() => {
+    refreshAnalysis();
+    generateDoctorReport();
+  }, 100);
 });
 
 // Gemini APIキー安全管理
@@ -258,13 +269,126 @@ function loadClinicalHistory() {
   setVal('lab_doctorComment', globalClinicalHistory.doctorComment);
 }
 
+// 受診回セレクターの動的描画
+function renderCheckupRecordSelector() {
+  const selector = document.getElementById('checkupRecordSelector');
+  const modeLabel = document.getElementById('checkupRecordModeLabel');
+  if (!selector) return;
+
+  selector.innerHTML = '';
+  const r = globalCheckupHistory || [];
+
+  r.forEach((item, idx) => {
+    const opt = document.createElement('option');
+    opt.value = idx.toString();
+    const isLatest = (idx === 0) ? ' [最新]' : '';
+    opt.textContent = `${item.yearLabel || '健診'} (${item.date || '日付未定'})${isLatest}`;
+    if (idx === currentEditingCheckupIndex) opt.selected = true;
+    selector.appendChild(opt);
+  });
+
+  if (currentEditingCheckupIndex === -1) {
+    const optNew = document.createElement('option');
+    optNew.value = "-1";
+    optNew.textContent = "＋ 新規受診回 (入力中)";
+    optNew.selected = true;
+    selector.appendChild(optNew);
+    if (modeLabel) modeLabel.textContent = "現在: 新規健診データを入力中（保存で追加）";
+  } else {
+    if (modeLabel) {
+      const cur = r[currentEditingCheckupIndex];
+      const curName = cur ? `${cur.yearLabel} (${cur.date})` : '選択中';
+      modeLabel.textContent = `現在: ${curName} のデータを編集・閲覧中`;
+    }
+  }
+}
+
+// セレクター切り替え時のフォーム反映
+function switchCheckupRecordFromSelector(valueStr) {
+  const idx = parseInt(valueStr, 10);
+  currentEditingCheckupIndex = idx;
+
+  if (idx === -1) {
+    prepareNewCheckupRecord();
+    return;
+  }
+
+  const r = globalCheckupHistory || [];
+  const target = r[idx];
+  if (!target) return;
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val !== undefined && val !== null ? val : '';
+  };
+
+  setVal('lab_checkDate', target.date ? target.date.replace(/\//g, '-') : '');
+  setVal('lab_waist', target.waist);
+  setVal('lab_metabolicJudge', target.metabolicJudge);
+  setVal('lab_ecg', target.ecg);
+  setVal('lab_echo', target.echo);
+  setVal('lab_ldl', target.ldl);
+  setVal('lab_hdl', target.hdl);
+  setVal('lab_tg', target.tg);
+  setVal('lab_ua', target.ua);
+  setVal('lab_fpg', target.fpg);
+  setVal('lab_hba1c', target.hba1c);
+  setVal('lab_egfr', target.egfr);
+  setVal('lab_cre', target.cre);
+  setVal('lab_rbc', target.rbc);
+  setVal('lab_hb', target.hb);
+  setVal('lab_ast', target.ast);
+  setVal('lab_alt', target.alt);
+  setVal('lab_ggtp', target.ggtp);
+  setVal('lab_totalChol', target.totalChol);
+  setVal('lab_doctorComment', target.doctorComment);
+
+  renderCheckupRecordSelector();
+}
+
+// 新規健診結果の追加準備
+function prepareNewCheckupRecord() {
+  currentEditingCheckupIndex = -1;
+
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val;
+  };
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  setVal('lab_checkDate', todayStr);
+  setVal('lab_waist', '');
+  setVal('lab_metabolicJudge', '');
+  setVal('lab_ecg', '');
+  setVal('lab_echo', '');
+  setVal('lab_ldl', '');
+  setVal('lab_hdl', '');
+  setVal('lab_tg', '');
+  setVal('lab_ua', '');
+  setVal('lab_fpg', '');
+  setVal('lab_hba1c', '');
+  setVal('lab_egfr', '');
+  setVal('lab_cre', '');
+  setVal('lab_rbc', '');
+  setVal('lab_hb', '');
+  setVal('lab_ast', '');
+  setVal('lab_alt', '');
+  setVal('lab_ggtp', '');
+  setVal('lab_totalChol', '');
+  setVal('lab_doctorComment', '');
+
+  renderCheckupRecordSelector();
+  const dateInput = document.getElementById('lab_checkDate');
+  if (dateInput) dateInput.focus();
+}
+
 function autoSaveClinicalHistory() {
   const getVal = (id) => {
     const el = document.getElementById(id);
     return el ? el.value.trim() : '';
   };
 
-  globalClinicalHistory = {
+  const currentFormValues = {
     conditions: getVal('hist_conditions'),
     notes: getVal('hist_notes'),
     checkDate: getVal('lab_checkDate'),
@@ -289,36 +413,91 @@ function autoSaveClinicalHistory() {
     doctorComment: getVal('lab_doctorComment')
   };
 
+  // 健診配列への保存（新規追加 または 選択中の回の更新）
+  if (!globalCheckupHistory) globalCheckupHistory = [];
+
+  const checkupItem = {
+    yearLabel: (currentEditingCheckupIndex === -1 || currentEditingCheckupIndex === 0) ? "今回" : (globalCheckupHistory[currentEditingCheckupIndex]?.yearLabel || "健診"),
+    date: currentFormValues.checkDate ? currentFormValues.checkDate.replace(/-/g, '/') : '',
+    facility: globalCheckupHistory[currentEditingCheckupIndex]?.facility || "公立昭和病院 予防健診センター",
+    doctor: globalCheckupHistory[currentEditingCheckupIndex]?.doctor || "担当医",
+    height: globalCheckupHistory[currentEditingCheckupIndex]?.height || 176.0,
+    weight: globalCheckupHistory[currentEditingCheckupIndex]?.weight || 81.2,
+    waist: currentFormValues.waist,
+    bmi: globalCheckupHistory[currentEditingCheckupIndex]?.bmi || 26.2,
+    bpSys: globalCheckupHistory[currentEditingCheckupIndex]?.bpSys || 135,
+    bpDia: globalCheckupHistory[currentEditingCheckupIndex]?.bpDia || 85,
+    totalChol: currentFormValues.totalChol,
+    tg: currentFormValues.tg,
+    hdl: currentFormValues.hdl,
+    ldl: currentFormValues.ldl,
+    nonHdl: (currentFormValues.totalChol && currentFormValues.hdl) ? (currentFormValues.totalChol - currentFormValues.hdl) : null,
+    ua: currentFormValues.ua,
+    ast: currentFormValues.ast,
+    alt: currentFormValues.alt,
+    ggtp: currentFormValues.ggtp,
+    fpg: currentFormValues.fpg,
+    hba1c: currentFormValues.hba1c,
+    urineSugar: globalCheckupHistory[currentEditingCheckupIndex]?.urineSugar || "(-)",
+    urineProtein: globalCheckupHistory[currentEditingCheckupIndex]?.urineProtein || "(-)",
+    rbc: currentFormValues.rbc,
+    hb: currentFormValues.hb,
+    ht: globalCheckupHistory[currentEditingCheckupIndex]?.ht || 46.0,
+    wbc: globalCheckupHistory[currentEditingCheckupIndex]?.wbc || 4200,
+    cre: currentFormValues.cre,
+    egfr: currentFormValues.egfr,
+    ecg: currentFormValues.ecg,
+    echo: currentFormValues.echo,
+    fundus: globalCheckupHistory[currentEditingCheckupIndex]?.fundus || "異常なし",
+    metabolicJudge: currentFormValues.metabolicJudge,
+    doctorComment: currentFormValues.doctorComment
+  };
+
+  if (currentEditingCheckupIndex === -1) {
+    // 新規追加：先頭に挿入
+    globalCheckupHistory.unshift(checkupItem);
+    currentEditingCheckupIndex = 0;
+  } else if (globalCheckupHistory[currentEditingCheckupIndex]) {
+    // 既存更新
+    globalCheckupHistory[currentEditingCheckupIndex] = Object.assign({}, globalCheckupHistory[currentEditingCheckupIndex], checkupItem);
+  } else {
+    globalCheckupHistory.push(checkupItem);
+    currentEditingCheckupIndex = 0;
+  }
+
+  // 最新回（インデックス0）の内容を globalClinicalHistory へ同期
+  const latest = globalCheckupHistory[0] || {};
+  globalClinicalHistory = {
+    conditions: currentFormValues.conditions,
+    notes: currentFormValues.notes,
+    checkDate: latest.date ? latest.date.replace(/\//g, '-') : currentFormValues.checkDate,
+    waist: latest.waist,
+    metabolicJudge: latest.metabolicJudge,
+    ecg: latest.ecg,
+    echo: latest.echo,
+    ldl: latest.ldl,
+    hdl: latest.hdl,
+    tg: latest.tg,
+    ua: latest.ua,
+    fpg: latest.fpg,
+    hba1c: latest.hba1c,
+    egfr: latest.egfr,
+    cre: latest.cre,
+    rbc: latest.rbc,
+    hb: latest.hb,
+    ast: latest.ast,
+    alt: latest.alt,
+    ggtp: latest.ggtp,
+    totalChol: latest.totalChol,
+    doctorComment: latest.doctorComment
+  };
+
   localStorage.setItem(MASTER_KEY_HISTORY, JSON.stringify(globalClinicalHistory));
+  localStorage.setItem(MASTER_KEY_CHECKUPS, JSON.stringify(globalCheckupHistory));
+
   if (globalProfile) {
     globalProfile.clinicalHistory = globalClinicalHistory;
     localStorage.setItem(MASTER_KEY_PROFILE, JSON.stringify(globalProfile));
-  }
-
-  // 最新回の健診履歴配列にも自動連動
-  if (globalCheckupHistory && globalCheckupHistory.length > 0) {
-    const latest = globalCheckupHistory[0];
-    if (globalClinicalHistory.checkDate) latest.date = globalClinicalHistory.checkDate;
-    if (globalClinicalHistory.waist) latest.waist = globalClinicalHistory.waist;
-    if (globalClinicalHistory.ldl) latest.ldl = globalClinicalHistory.ldl;
-    if (globalClinicalHistory.hdl) latest.hdl = globalClinicalHistory.hdl;
-    if (globalClinicalHistory.tg) latest.tg = globalClinicalHistory.tg;
-    if (globalClinicalHistory.ua) latest.ua = globalClinicalHistory.ua;
-    if (globalClinicalHistory.fpg) latest.fpg = globalClinicalHistory.fpg;
-    if (globalClinicalHistory.hba1c) latest.hba1c = globalClinicalHistory.hba1c;
-    if (globalClinicalHistory.egfr) latest.egfr = globalClinicalHistory.egfr;
-    if (globalClinicalHistory.cre) latest.cre = globalClinicalHistory.cre;
-    if (globalClinicalHistory.rbc) latest.rbc = globalClinicalHistory.rbc;
-    if (globalClinicalHistory.hb) latest.hb = globalClinicalHistory.hb;
-    if (globalClinicalHistory.ast) latest.ast = globalClinicalHistory.ast;
-    if (globalClinicalHistory.alt) latest.alt = globalClinicalHistory.alt;
-    if (globalClinicalHistory.ggtp) latest.ggtp = globalClinicalHistory.ggtp;
-    if (globalClinicalHistory.totalChol) latest.totalChol = globalClinicalHistory.totalChol;
-    if (globalClinicalHistory.ecg) latest.ecg = globalClinicalHistory.ecg;
-    if (globalClinicalHistory.echo) latest.echo = globalClinicalHistory.echo;
-    if (globalClinicalHistory.metabolicJudge) latest.metabolicJudge = globalClinicalHistory.metabolicJudge;
-    if (globalClinicalHistory.doctorComment) latest.doctorComment = globalClinicalHistory.doctorComment;
-    localStorage.setItem(MASTER_KEY_CHECKUPS, JSON.stringify(globalCheckupHistory));
   }
 
   const hNotice = document.getElementById('historyAutoSaveNotice');
@@ -326,6 +505,7 @@ function autoSaveClinicalHistory() {
   if (hNotice) { hNotice.textContent = "✅ 自動保存完了"; hNotice.style.color = "var(--accent-green)"; }
   if (lNotice) { lNotice.textContent = "✅ 自動保存完了"; lNotice.style.color = "var(--accent-green)"; }
 
+  renderCheckupRecordSelector();
   generateDoctorReport();
 }
 
@@ -357,7 +537,7 @@ function getClinicalHistorySummaryText() {
 }
 
 // =========================================================
-// 🧪 人間ドック・健診経年データ 管理（古い残骸データの完全パージ＆確定6回クリーン置換）
+// 🧪 人間ドック・健診経年データ 管理
 // =========================================================
 function loadCheckupHistory() {
   const raw = localStorage.getItem(MASTER_KEY_CHECKUPS);
@@ -366,7 +546,6 @@ function loadCheckupHistory() {
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
-      // データが配列でない、要素数が6未満、または尿酸値(ua)等の新プロパティを持たない古い不完全データの場合
       if (!Array.isArray(parsed) || parsed.length < 6 || !parsed[0] || parsed[0].ua === undefined) {
         needsCleanUpgrade = true;
       } else {
@@ -379,13 +558,11 @@ function loadCheckupHistory() {
     needsCleanUpgrade = true;
   }
 
-  // 古い中途半端なデータや残骸を完全にパージし、洗練された確定全6回完全版で上書き置換
   if (needsCleanUpgrade) {
     globalCheckupHistory = JSON.parse(JSON.stringify(PRESET_CHECKUP_DATA));
     localStorage.setItem(MASTER_KEY_CHECKUPS, JSON.stringify(globalCheckupHistory));
   }
 
-  // 最新回の検査値を単体カルテフォームに同期
   if (globalCheckupHistory && globalCheckupHistory.length > 0) {
     const latest = globalCheckupHistory[0];
     if (!globalClinicalHistory.checkDate) globalClinicalHistory.checkDate = latest.date;
@@ -461,6 +638,7 @@ function importCheckupSoloJSON(event) {
       }
 
       globalCheckupHistory = list;
+      currentEditingCheckupIndex = 0;
       localStorage.setItem(MASTER_KEY_CHECKUPS, JSON.stringify(globalCheckupHistory));
 
       if (globalCheckupHistory.length > 0) {
@@ -490,6 +668,7 @@ function importCheckupSoloJSON(event) {
 
       loadClinicalHistory();
       loadCheckupHistory();
+      renderCheckupRecordSelector();
       refreshCheckupAnalytics();
       generateDoctorReport();
       alert(`✅ ${count} 回分の健診データを正常に読み込み・保管しました！`);
@@ -506,6 +685,7 @@ function loadPresetCheckupData() {
   if (!confirm("確定健診データ（2021年春の健康原点〜最新2025年秋までの全6回分）でクリーン更新しますか？\n※古い残骸データは一掃され、過去6回分のフルデータに統一されます。")) return;
 
   globalCheckupHistory = JSON.parse(JSON.stringify(PRESET_CHECKUP_DATA));
+  currentEditingCheckupIndex = 0;
   localStorage.setItem(MASTER_KEY_CHECKUPS, JSON.stringify(globalCheckupHistory));
 
   const top = globalCheckupHistory[0];
@@ -533,18 +713,18 @@ function loadPresetCheckupData() {
 
   loadClinicalHistory();
   loadCheckupHistory();
+  renderCheckupRecordSelector();
   refreshCheckupAnalytics();
   generateDoctorReport();
   alert("✅ 過去6回分の正式健診データを正常に反映しました！");
 }
 
 // =========================================================
-// 🧪 健診経年アナリティクス 描画ロジック（障害隔離アーキテクチャ・公式標準Chart.js準拠）
+// 🧪 健診経年アナリティクス 描画ロジック
 // =========================================================
 function refreshCheckupAnalytics() {
   if (!globalCheckupHistory || globalCheckupHistory.length === 0) return;
 
-  // グラフ用時系列配列（古い順：2021春 ➔ 2021冬 ➔ ... ➔ 2025今回）
   const chronoList = [...globalCheckupHistory].reverse();
   const labels = chronoList.map(item => `${item.yearLabel}\n(${item.date ? item.date.slice(2,7) : ''})`);
 
@@ -568,7 +748,6 @@ function refreshCheckupAnalytics() {
   const creArr = chronoList.map(x => x.cre);
   const hbArr = chronoList.map(x => x.hb);
 
-  // 【障害隔離】各グラフと表の描画を個別に保護（道連れ停止の完全根絶）
   try { renderCheckupLipidChart(labels, ldlArr, hdlArr, tgArr, sysBpArr, lhRatioArr); } catch (e) { console.warn("Lipid chart error:", e); }
   try { renderCheckupGlucoseBodyChart(labels, hba1cArr, fpgArr, waistArr, weightArr); } catch (e) { console.warn("Glucose chart error:", e); }
   try { renderCheckupLiverChart(labels, ggtpArr, astArr, altArr, uaArr); } catch (e) { console.warn("Liver chart error:", e); }
@@ -642,7 +821,6 @@ function renderCheckupGlucoseBodyChart(labels, hba1c, fpg, waist, weight) {
   });
 }
 
-// 肝機能・尿酸値混合チャート（公式標準 y/y1 準拠・クラッシュ完全防止）
 function renderCheckupLiverChart(labels, ggtp, ast, alt, ua) {
   const canvas = document.getElementById('checkupLiverChart');
   if (!canvas) return;
@@ -704,19 +882,18 @@ function renderCheckupKidneyChart(labels, egfr, cre, hb) {
   });
 }
 
-// 📋 経年マトリクステーブルの動的レンダリング（全6回分完全展開）
 function renderCheckupMatrixTable() {
   const tbody = document.getElementById('checkupMatrixTableBody');
   if (!tbody) return;
   tbody.innerHTML = '';
 
   const r = globalCheckupHistory || [];
-  const c0 = r[0] || {}; // 今回 2025/11
-  const c1 = r[1] || {}; // 前回 R6/12
-  const c2 = r[2] || {}; // 前々回 R5/11
-  const c3 = r[3] || {}; // 4回前 R4/11
-  const c4 = r[4] || {}; // 5回前 R3/12
-  const c5 = r[5] || {}; // 原点 R3/02 (健康時)
+  const c0 = r[0] || {};
+  const c1 = r[1] || {};
+  const c2 = r[2] || {};
+  const c3 = r[3] || {};
+  const c4 = r[4] || {};
+  const c5 = r[5] || {};
 
   const items = [
     { cat: "身体計測", name: "身長 (cm)", v0: c0.height, v1: c1.height, v2: c2.height, v3: c3.height, v4: c4.height, v5: c5.height, ref: "─", note: "安定" },
@@ -780,7 +957,6 @@ function renderCheckupMatrixTable() {
   });
 }
 
-// 🔍 心電図・エコー・眼底・医師所見 経年推移の描画（全6回分）
 function renderCheckupFindingsTable() {
   const tbody = document.getElementById('checkupFindingsTableBody');
   if (!tbody) return;
@@ -804,7 +980,6 @@ function renderCheckupFindingsTable() {
   });
 }
 
-// 🤖 経年ドック総合アセスメント（AIコール ＆ 2021年原点対比ルールベース）
 async function runCheckupAiReview() {
   const outputEl = document.getElementById('checkupAiReviewOutputArea');
   const apiKey = (localStorage.getItem(MASTER_KEY_GEMINI_KEY) || '').trim();
@@ -860,8 +1035,8 @@ function runRuleBasedCheckupReview() {
 
 function generateRuleBasedCheckupReview() {
   const r = globalCheckupHistory || [];
-  const c0 = r[0] || {}; // 今回
-  const cBase = r[r.length - 1] || {}; // 原点
+  const c0 = r[0] || {};
+  const cBase = r[r.length - 1] || {};
 
   const wDiff = (c0.weight && cBase.weight) ? (c0.weight - cBase.weight).toFixed(1) : 4.4;
   const lhRatio = (c0.ldl && c0.hdl) ? (c0.ldl / c0.hdl).toFixed(2) : 2.66;
@@ -930,7 +1105,7 @@ function exportViewerJSON() {
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const fullBackup = {
-    version: "v1.6.2",
+    version: "v1.6.3",
     exportedAt: new Date().toISOString(),
     profile: globalProfile,
     clinicalHistory: globalClinicalHistory,
@@ -997,6 +1172,7 @@ function importViewerJSON(event) {
 
       if (data.checkupHistory && Array.isArray(data.checkupHistory)) {
         globalCheckupHistory = data.checkupHistory;
+        currentEditingCheckupIndex = 0;
       }
 
       localStorage.setItem(MASTER_KEY_RECORDS, JSON.stringify(globalRecords));
@@ -1014,6 +1190,7 @@ function importViewerJSON(event) {
 
       loadClinicalHistory();
       loadCheckupHistory();
+      renderCheckupRecordSelector();
       renderMasterMedsTable();
       refreshAnalysis();
       refreshCheckupAnalytics();
@@ -1028,7 +1205,7 @@ function importViewerJSON(event) {
   reader.readAsText(file);
 }
 
-// タブ切り替え制御（可視化連動レンダリング：DOMサイズ確定後にグラフ再描画）
+// タブ切り替え制御（DOMサイズ確定後にグラフ再描画）
 function switchViewerTab(tabId) {
   document.querySelectorAll('.nav-tabs .tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.getAttribute('data-tab') === tabId);
@@ -1040,16 +1217,14 @@ function switchViewerTab(tabId) {
   if (tabId === 'analysisTab') {
     setTimeout(refreshAnalysis, 80);
   } else if (tabId === 'checkupTab') {
-    setTimeout(() => {
-      refreshCheckupAnalytics();
-    }, 80);
+    setTimeout(refreshCheckupAnalytics, 80);
   } else if (tabId === 'reportTab') {
     setTimeout(generateDoctorReport, 80);
   }
 }
 
 // =========================================================
-// TAB 1: お薬マスタ管理
+// TAB: ⚙️ 臨床マスタ管理室（お薬マスタ管理）
 // =========================================================
 function renderMasterMedsTable() {
   const activeTbody = document.getElementById('medActiveTableBody');
@@ -1308,8 +1483,57 @@ function getFormalMedicationSummary() {
 }
 
 // =========================================================
-// TAB 2: AI総合相談 ＆ スマートトリアージ判定室
+// TAB 2: AI総合相談 ＆ 人体マップ問診アシスタント
 // =========================================================
+function onBodyPartClick(partName, event) {
+  currentSelectedBodyPart = partName;
+
+  document.querySelectorAll('.body-part-btn').forEach(el => {
+    el.classList.remove('selected');
+  });
+
+  if (event && event.currentTarget) {
+    event.currentTarget.classList.add('selected');
+  }
+
+  const label = document.getElementById('bmSelectedPartLabel');
+  if (label) {
+    label.textContent = `${partName}`;
+    label.style.color = "var(--accent-rose)";
+    label.style.fontWeight = "bold";
+  }
+}
+
+function applySymptomTag(symptomText) {
+  const inputEl = document.getElementById('aiConsultationInput');
+  if (!inputEl) return;
+
+  const part = currentSelectedBodyPart || "気になる部位";
+  const tagText = `【主訴】部位: ${part} / 症状: ${symptomText}`;
+
+  const currentVal = inputEl.value.trim();
+  if (currentVal.length === 0) {
+    inputEl.value = `${tagText}。\n`;
+  } else {
+    inputEl.value = `${tagText}。\n${currentVal}`;
+  }
+
+  inputEl.focus();
+}
+
+function resetBodyMapSelection() {
+  currentSelectedBodyPart = "";
+  document.querySelectorAll('.body-part-btn').forEach(el => {
+    el.classList.remove('selected');
+  });
+  const label = document.getElementById('bmSelectedPartLabel');
+  if (label) {
+    label.textContent = "（左の人体図で部位をタップしてください）";
+    label.style.color = "var(--accent-blue)";
+    label.style.fontWeight = "normal";
+  }
+}
+
 async function runAiConsultation() {
   const inputEl = document.getElementById('aiConsultationInput');
   const outputEl = document.getElementById('consultationOutputArea');
@@ -1317,7 +1541,7 @@ async function runAiConsultation() {
   const query = (inputEl.value || '').trim();
 
   if (!query) {
-    alert("相談内容や質問、食べた食事を入力してください。（例: お昼に定食屋で生姜焼きを食べたがどれを選べばいい？ / 2021年と比べて体重が4kg増えたが、何を優先すべき？）");
+    alert("相談内容や質問、気になる体の部位・症状を入力してください。（例: 「胸部が重苦しい」「降圧剤とお酒の飲み合わせについて」）");
     return;
   }
 
@@ -1378,7 +1602,7 @@ ${memoContext}
 
 【スマート・トリアージ（回答者自律選定ルール）】
 ユーザーの相談内容を判定し、最適な専門家のみが回答すること。無理に両名で回答してはならない。
-1. 🩺 【医療・血圧・病気・症状・お薬・副作用・検査値・既往歴・頭痛等の相談】:
+1. 🩺 【医療・血圧・病気・症状・部位の痛み/違和感・お薬・副作用・検査値・既往歴等の相談】:
    ➔ 🩺 【Dr.ケン (循環器内科) の臨床回答】のみを出力すること。
    - 患者の既往歴や血液検査数値（LDL 165mg/dL、HbA1c 6.0%、完全右脚ブロック等）、服用薬（${medsSummary}）、直近血圧、体調メモとの関連を具体的に解説。
 2. 🥗 【食事・食品選び・メニュー逆引き・減塩・レシピ・PFC・間食・お酒等の相談】:
@@ -1418,7 +1642,7 @@ ${query}
 
 function generateRuleBasedConsultation(query) {
   const q = query.toLowerCase();
-  const isMedOrBp = /血圧|薬|降圧|アスピリン|タケキャブ|ジルムロ|スタチン|カルベジロール|頭痛|めまい|熱|脈|心臓|胸|ステント|ldl|コレステロール|中性脂肪|検査|右脚ブロック|尿酸/.test(q);
+  const isMedOrBp = /血圧|薬|降圧|アスピリン|タケキャブ|ジルムロ|スタチン|カルベジロール|頭痛|めまい|熱|脈|心臓|胸|ステント|ldl|コレステロール|中性脂肪|検査|右脚ブロック|尿酸|痛|部位|主訴|圧迫|しびれ|違和感/.test(q);
   const isFood = /食べ|飯|食|朝食|昼食|夕食|ラーメン|味噌汁|定食|生姜焼|肉|魚|寿司|カレー|間食|酒|ビール|カロリー|塩分|明太子|チーズ/.test(q);
 
   let suggestions = [];
@@ -1445,9 +1669,9 @@ function generateRuleBasedConsultation(query) {
 
   if (isMedOrBp && !isFood) {
     html += `<div class="conf-doc"><b style="color:var(--accent-blue); font-size:0.88rem;">🩺 Dr.ケン (循環器内科) の臨床回答:</b><br>`;
-    html += `お薬や血圧、臨床検査（直近LDL: 165mg/dL、HbA1c: 6.0%、完全右脚ブロック、尿酸値安全域維持）に関するご相談ですね。<br>`;
-    html += `2021年の健康時（76.8kg）から約4kgの体重増加に伴い血圧やメタボ傾向が高止まりしています。冠動脈保護のためには家庭血圧（125/75未満）の安定とアトルバスタチン等の服薬遵守、そして76kg台への原点回帰が最も効果的です。<br>`;
-    html += `処方薬の継続服用と、急激な血圧変動や脱水の防止を意識してください。気になる変化が続く際は主治医へご相談ください。<br><br>`;
+    html += `ご相談内容（主訴・部位症状または血圧・お薬等）を確認しました。<br>`;
+    html += `現在、冠動脈保護のため処方薬（ジルムロ、キャブピリン、アトルバスタチン等）を継続されています。胸部の圧迫感や息切れ、強い動悸、あるいは背中や左肩に広がる痛みがある場合は、虚血性心疾患の警戒が必要ですので直ちに安静にし、症状が続く場合は躊躇せず医療機関へご連絡ください。<br>`;
+    html += `また、2021年の健康時（76.8kg）から現在（81.2kg）への体重増加に伴い、血圧や腹囲が高止まり傾向にあります。日々の家庭血圧（125/75未満）のモニタリングと、服薬継続が血管事故予防の最も確実な防壁となります。<br><br>`;
     html += `<small style="color:var(--text-muted);">※マスタ管理室でAPIキーを登録すると、Gemini AIが現在の処方名（${getFormalMedicationSummary()}）および過去6回の健診データを踏まえ、パーソナライズされた助言を行います。</small></div>`;
   } else if (isFood && !isMedOrBp) {
     html += `<div class="conf-nut"><b style="color:var(--accent-green); font-size:0.88rem;">🥗 管理栄養士 アヤ のメニュー処方:</b><br>`;
@@ -1474,7 +1698,7 @@ function generateRuleBasedConsultation(query) {
 }
 
 // =========================================================
-// TAB 3: 多角臨床ダッシュボード ロジック
+// TAB 1: 多角臨床ダッシュボード ロジック
 // =========================================================
 function getFilteredRecords(period) {
   const allDates = Object.keys(globalRecords).sort();
@@ -1819,7 +2043,7 @@ function renderViewerSleepBpChart(labels, sleepH, mSys) {
   });
 }
 
-// TAB 3: AI カンファレンス実行
+// AI カンファレンス実行
 async function runAiConference() {
   const outputEl = document.getElementById('conferenceOutputArea');
   const btn = document.getElementById('btnRunAi');
@@ -2046,7 +2270,7 @@ function generateRuleBasedClinicalAdvice(sysM, diaM, sysN, diaN, salt, pRate, fR
 }
 
 // =========================================================
-// TAB 5: 医師提出用 A4クリニック・レポート 生成ロジック
+// TAB 4: 医師提出用 A4クリニック・レポート 生成ロジック
 // =========================================================
 function generateDoctorReport() {
   const period = document.getElementById('reportPeriodSelect').value;
